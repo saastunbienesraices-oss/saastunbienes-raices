@@ -1,0 +1,2402 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sáastun · Bienes Raíces</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --cream:#FDFAF5;
+  --white:#FFFFFF;
+  --warm:#F5F0E8;
+  --warm2:#EDE6D8;
+  --warm3:#E0D6C4;
+  --gold:#B8860B;
+  --gold2:#C9960C;
+  --gold3:#D4A929;
+  --gold-light:#F0D070;
+  --gold-pale:rgba(184,134,11,0.08);
+  --gold-border:rgba(184,134,11,0.18);
+  --gold-border2:rgba(184,134,11,0.32);
+  --ink:#1A1510;
+  --ink2:#2D2519;
+  --ink3:#3D3328;
+  --text:#2A2015;
+  --muted:#4A3E32;
+  --muted2:#7A6E60;
+  --shadow:rgba(26,21,16,0.06);
+  --shadow2:rgba(26,21,16,0.12);
+  --shadow3:rgba(26,21,16,0.22);
+}
+
+/* ── CATEGORY PILLS ── */
+.cat-pills{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;padding:0 24px 36px;max-width:860px;margin:0 auto;}
+.cat-pill{
+  padding:9px 18px;border:1px solid var(--gold-border2);background:transparent;
+  color:var(--muted);font-family:'Outfit',sans-serif;font-size:11px;font-weight:500;letter-spacing:.08em;
+  cursor:pointer;transition:all .22s;border-radius:40px;
+}
+.cat-pill:hover{border-color:var(--gold);color:var(--gold);}
+.cat-pill.active{background:var(--gold);border-color:var(--gold);color:var(--white);}
+
+/* ── VIEW TOGGLE ── */
+.view-toggle{display:flex;gap:8px;justify-content:center;margin-bottom:36px;}
+.view-btn{
+  display:flex;align-items:center;gap:7px;padding:10px 20px;
+  border:1px solid var(--gold-border2);background:transparent;
+  color:var(--muted2);font-family:'Outfit',sans-serif;font-size:11px;font-weight:500;letter-spacing:.08em;
+  cursor:pointer;transition:all .22s;
+}
+.view-btn.active{background:var(--ink);border-color:var(--ink);color:var(--white);}
+.view-btn:hover:not(.active){border-color:var(--gold);color:var(--gold);}
+
+
+/* ── CONTACT FORM ── */
+.cform-field{margin-bottom:14px;}
+.cform-label{display:block;font-size:9px;font-weight:600;color:var(--gold);letter-spacing:.18em;text-transform:uppercase;margin-bottom:7px;}
+.cform-input{
+  width:100%;padding:11px 13px;
+  border:1px solid var(--warm3);background:var(--cream);color:var(--text);
+  font-family:'Outfit',sans-serif;font-size:13px;font-weight:300;outline:none;
+  transition:border-color .2s,background .2s;
+}
+.cform-input:focus{border-color:var(--gold);background:var(--white);box-shadow:0 0 0 3px rgba(184,134,11,.06);}
+.cform-btn{
+  width:100%;padding:15px;margin-top:6px;
+  background:linear-gradient(135deg,#25D366,#1da851);
+  border:none;color:var(--white);
+  font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+  cursor:pointer;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:10px;
+  box-shadow:0 4px 18px rgba(37,211,102,.3);
+}
+.cform-btn:hover{filter:brightness(1.06);transform:translateY(-1px);}
+body{
+  font-family:'Outfit',sans-serif;
+  background:var(--cream);
+  color:var(--text);
+  overflow-x:hidden;
+  cursor:none;
+}
+
+/* ── CUSTOM CURSOR ── */
+#cursor{position:fixed;pointer-events:none;z-index:9999;mix-blend-mode:multiply;}
+#cursor-dot{width:8px;height:8px;background:var(--gold);border-radius:50%;position:fixed;transform:translate(-50%,-50%);transition:transform .1s;pointer-events:none;z-index:9999;}
+#cursor-ring{width:36px;height:36px;border:1.5px solid var(--gold);border-radius:50%;position:fixed;transform:translate(-50%,-50%);transition:all .18s cubic-bezier(.16,1,.3,1);pointer-events:none;z-index:9998;opacity:0.6;}
+body:hover #cursor-dot{opacity:1;}
+.cursor-hover #cursor-ring{transform:translate(-50%,-50%) scale(1.7);opacity:0.3;border-color:var(--gold2);}
+
+/* ── CANVAS BG ── */
+#bgCanvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:1;}
+
+/* ── LOADING ── */
+#loadingScreen{
+  position:fixed;inset:0;
+  background:var(--cream);
+  z-index:2000;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;
+  transition:opacity .9s ease;
+  overflow:hidden;
+}
+#loadingScreen.hide{opacity:0;pointer-events:none;}
+
+/* Loading bg radial glow */
+#loadingScreen::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 70% 55% at 50% 50%, rgba(184,134,11,.09) 0%, transparent 70%);
+  pointer-events:none;
+}
+
+/* Sun SVG wrapper */
+.load-sun-wrap{
+  position:relative;
+  width:160px;height:160px;
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:32px;
+}
+.load-sun-svg{
+  width:110px;height:110px;
+  animation:sunSpin 18s linear infinite, sunPulse 3s ease-in-out infinite;
+  filter:drop-shadow(0 0 18px rgba(184,134,11,.35)) drop-shadow(0 0 40px rgba(184,134,11,.15));
+}
+@keyframes sunSpin{to{transform:rotate(360deg)}}
+@keyframes sunPulse{
+  0%,100%{filter:drop-shadow(0 0 18px rgba(184,134,11,.35)) drop-shadow(0 0 40px rgba(184,134,11,.15));}
+  50%{filter:drop-shadow(0 0 28px rgba(184,134,11,.6)) drop-shadow(0 0 60px rgba(184,134,11,.25));}
+}
+
+/* Outer orbit ring */
+.load-orbit{
+  position:absolute;inset:0;
+  border-radius:50%;
+  border:1px solid var(--gold-border2);
+  animation:spinRing 6s linear infinite;
+}
+.load-orbit::after{
+  content:'';position:absolute;top:-4px;left:50%;
+  width:7px;height:7px;
+  background:var(--gold);border-radius:50%;
+  transform:translateX(-50%);
+  box-shadow:0 0 8px rgba(184,134,11,.7);
+}
+/* Inner orbit */
+.load-orbit2{
+  position:absolute;inset:14px;
+  border-radius:50%;
+  border:1px solid rgba(184,134,11,.1);
+  animation:spinRing 4s linear infinite reverse;
+}
+.load-orbit2::before{
+  content:'';position:absolute;bottom:-3px;right:10px;
+  width:4px;height:4px;
+  background:var(--gold3);border-radius:50%;
+  box-shadow:0 0 5px rgba(184,134,11,.5);
+}
+
+@keyframes spinRing{to{transform:rotate(360deg)}}
+
+/* Welcome text */
+.load-welcome{
+  font-family:'Cormorant Garamond',serif;
+  font-size:13px;color:var(--gold);
+  letter-spacing:.42em;text-transform:uppercase;
+  margin-bottom:10px;
+  opacity:0;animation:loadFadeIn .8s .2s ease forwards;
+}
+.load-brand{
+  font-family:'Cormorant Garamond',serif;
+  font-size:clamp(34px,7vw,54px);font-weight:300;
+  color:var(--ink);letter-spacing:.22em;text-transform:uppercase;
+  line-height:1;
+  margin-bottom:6px;
+  opacity:0;animation:loadFadeIn .9s .35s ease forwards;
+}
+.load-brand em{color:var(--gold2);font-style:italic;}
+.load-sub{
+  font-family:'Cormorant Garamond',serif;
+  font-size:15px;font-style:italic;color:var(--muted);
+  letter-spacing:.1em;
+  margin-bottom:36px;
+  opacity:0;animation:loadFadeIn .9s .5s ease forwards;
+}
+
+.load-rule{
+  width:1px;height:42px;
+  background:linear-gradient(to bottom,var(--gold),transparent);
+  margin:0 auto 36px;
+  opacity:0;animation:loadFadeIn .7s .6s ease forwards;
+}
+
+.load-bar{width:120px;height:1px;background:var(--warm3);overflow:hidden;position:relative;opacity:0;animation:loadFadeIn .7s .7s ease forwards;}
+.load-bar-inner{width:40%;height:100%;background:linear-gradient(90deg,transparent,var(--gold),transparent);animation:loadSlide 1.1s infinite ease-in-out;}
+.load-caption{
+  font-size:9px;letter-spacing:.26em;text-transform:uppercase;color:var(--muted2);
+  margin-top:14px;
+  opacity:0;animation:loadFadeIn .7s .8s ease forwards;
+}
+@keyframes loadSlide{0%{margin-left:-40%}100%{margin-left:100%}}
+@keyframes loadFadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── NAV ── */
+.nav{
+  position:fixed;top:0;left:0;right:0;z-index:500;height:68px;
+  padding:0 36px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(253,250,245,0.94);
+  backdrop-filter:blur(24px);
+  border-bottom:1px solid var(--gold-border);
+  transform:translateY(-100%);
+  transition:transform .5s cubic-bezier(.16,1,.3,1);
+  box-shadow:0 4px 40px var(--shadow);
+}
+.nav.show{transform:translateY(0);}
+.nav-left{display:flex;align-items:center;gap:14px;}
+.nav-logo{width:38px;height:38px;object-fit:contain;mix-blend-mode:multiply;filter:saturate(1.3);}
+.nav-brand{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);}
+.nav-brand em{color:var(--gold2);font-style:italic;}
+.nav-right{display:flex;align-items:center;gap:12px;}
+.nav-count{font-size:9px;letter-spacing:.16em;color:var(--muted2);text-transform:uppercase;}
+.btn-ghost-sm{
+  padding:7px 14px;
+  border:1px solid var(--gold-border2);
+  background:transparent;color:var(--muted);
+  font-family:'Outfit',sans-serif;font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+  cursor:none;transition:all .22s;
+}
+.btn-ghost-sm:hover{border-color:var(--gold);color:var(--gold);background:var(--gold-pale);}
+.btn-add{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:9px 18px;
+  border:1px solid var(--gold);
+  background:var(--gold);color:var(--white);
+  font-family:'Outfit',sans-serif;font-size:9px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;
+  cursor:none;transition:all .22s;
+}
+.btn-add:hover{background:var(--gold2);border-color:var(--gold2);transform:translateY(-1px);box-shadow:0 6px 20px rgba(184,134,11,.25);}
+
+/* ── HERO ── */
+.hero{
+  min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;
+  padding:90px 24px 120px;
+  position:relative;overflow:hidden;z-index:1;
+}
+
+/* Floating geometric shapes */
+.hero-shapes{position:absolute;inset:0;pointer-events:none;overflow:hidden;}
+.shape{position:absolute;border:1px solid var(--gold-border);opacity:0;animation:shapeFloat linear infinite;}
+.shape-1{width:280px;height:280px;border-radius:50%;top:8%;left:-5%;animation-duration:22s;animation-delay:0s;}
+.shape-2{width:180px;height:180px;top:20%;right:3%;animation-duration:18s;animation-delay:-4s;transform:rotate(45deg);}
+.shape-3{width:120px;height:120px;border-radius:50%;bottom:20%;left:8%;animation-duration:15s;animation-delay:-8s;}
+.shape-4{width:60px;height:60px;bottom:30%;right:12%;animation-duration:12s;animation-delay:-3s;transform:rotate(30deg);}
+.shape-5{width:400px;height:400px;top:-10%;right:-8%;border-radius:50%;animation-duration:30s;animation-delay:-12s;opacity:0;}
+.shape-6{width:200px;height:200px;bottom:5%;right:20%;animation-duration:20s;animation-delay:-6s;transform:rotate(15deg);}
+@keyframes shapeFloat{
+  0%{opacity:0;transform:translateY(0) rotate(0deg);}
+  10%{opacity:1;}
+  90%{opacity:1;}
+  100%{opacity:0;transform:translateY(-60px) rotate(20deg);}
+}
+
+/* Gold particles */
+.particles{position:absolute;inset:0;pointer-events:none;overflow:hidden;}
+.particle{
+  position:absolute;
+  width:3px;height:3px;
+  background:var(--gold3);
+  border-radius:50%;
+  opacity:0;
+  animation:particleDrift linear infinite;
+}
+@keyframes particleDrift{
+  0%{opacity:0;transform:translateY(0) scale(0);}
+  20%{opacity:0.7;transform:translateY(-20px) scale(1);}
+  80%{opacity:0.4;}
+  100%{opacity:0;transform:translateY(-120px) scale(0.5);}
+}
+
+/* Orb glow */
+.hero-orb{
+  position:absolute;
+  width:800px;height:800px;
+  background:radial-gradient(circle,rgba(212,169,41,.07) 0%,transparent 65%);
+  top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  pointer-events:none;
+  animation:orbPulse 4s ease-in-out infinite;
+}
+@keyframes orbPulse{
+  0%,100%{transform:translate(-50%,-50%) scale(1);}
+  50%{transform:translate(-50%,-50%) scale(1.08);}
+}
+
+.hero-content{position:relative;z-index:4;}
+.hero-logo{
+  width:100px;height:auto;
+  mix-blend-mode:multiply;
+  filter:saturate(1.3);
+  margin-bottom:28px;
+  animation:logoReveal 1.4s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes logoReveal{
+  from{opacity:0;transform:translateY(30px) scale(.9);}
+  to{opacity:1;transform:translateY(0) scale(1);}
+}
+
+.hero-eyebrow{
+  font-size:10px;letter-spacing:.46em;text-transform:uppercase;
+  color:var(--gold2);font-weight:600;
+  margin-bottom:20px;
+  animation:fadeSlideUp 1s .2s ease both;
+}
+.hero-title{
+  font-family:'Cormorant Garamond',serif;
+  font-size:clamp(64px,11vw,124px);
+  font-weight:300;line-height:.85;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink);
+  animation:fadeSlideUp 1s .3s ease both;
+}
+.hero-title span{
+  color:var(--gold2);
+  display:block;font-style:italic;
+  font-size:.48em;letter-spacing:.05em;text-transform:none;
+  margin-top:8px;font-weight:400;
+}
+
+/* Animated underline on SAASTUN */
+.hero-title-main{
+  position:relative;display:inline-block;
+}
+.hero-title-main::after{
+  content:'';
+  position:absolute;bottom:-6px;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);
+  transform:scaleX(0);
+  animation:underlineExpand 1.2s .9s cubic-bezier(.16,1,.3,1) forwards;
+}
+@keyframes underlineExpand{to{transform:scaleX(1);}}
+
+.hero-rule{
+  width:1px;height:60px;
+  background:linear-gradient(to bottom,transparent,var(--gold),transparent);
+  margin:30px auto;
+  animation:ruleGrow .8s .6s ease both;
+  transform-origin:top;
+}
+@keyframes ruleGrow{from{transform:scaleY(0);}to{transform:scaleY(1);}}
+
+.hero-cats{
+  font-size:10px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--ink3);font-weight:500;line-height:2.4;
+  animation:fadeSlideUp 1s .5s ease both;
+  margin-bottom:8px;
+}
+.hero-quienes{
+  max-width:420px;margin:22px auto 0;
+  animation:fadeSlideUp 1s .6s ease both;
+}
+.hero-quienes p{
+  font-family:'Cormorant Garamond',serif;
+  font-size:20px;line-height:1.9;color:var(--ink3);
+}
+.hero-quienes p em{color:var(--gold2);font-style:italic;}
+.hero-cta{margin-top:48px;animation:fadeSlideUp 1s .75s ease both;}
+
+@keyframes fadeSlideUp{
+  from{opacity:0;transform:translateY(22px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+.btn-primary{
+  display:inline-flex;align-items:center;gap:13px;
+  padding:15px 42px;
+  border:1px solid var(--gold);background:transparent;color:var(--gold);
+  font-family:'Outfit',sans-serif;font-size:10px;font-weight:600;letter-spacing:.28em;text-transform:uppercase;
+  cursor:none;position:relative;overflow:hidden;
+  transition:color .32s;
+}
+.btn-primary::before{
+  content:'';position:absolute;inset:0;
+  background:var(--gold);
+  transform:translateX(-101%);transition:transform .32s cubic-bezier(.16,1,.3,1);
+}
+.btn-primary:hover{color:var(--white);}
+.btn-primary:hover::before{transform:translateX(0);}
+.btn-primary span,.btn-primary svg{position:relative;z-index:1;}
+.btn-primary svg{transition:transform .25s;}
+.btn-primary:hover svg{transform:translateY(5px);}
+
+.hero-scroll{
+  position:absolute;bottom:32px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  color:var(--muted2);font-size:9px;letter-spacing:.2em;text-transform:uppercase;
+  animation:pulse 3s infinite;z-index:3;
+}
+.scroll-line{width:1px;height:44px;background:linear-gradient(to bottom,var(--gold-border2),transparent);}
+
+/* ── SECTION DIVIDER ── */
+.divider{
+  height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold-border2),transparent);
+  margin:0 48px;
+  position:relative;z-index:1;
+}
+.divider::before{
+  content:'◆';
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  color:var(--gold);font-size:8px;
+  background:var(--cream);padding:0 12px;
+}
+
+/* ── CATALOG ── */
+#catalogo{
+  padding:100px 40px 90px;
+  max-width:1420px;margin:0 auto;
+  position:relative;z-index:1;
+}
+.sec-header{text-align:center;margin-bottom:70px;}
+.sec-eyebrow{
+  font-size:9px;letter-spacing:.36em;text-transform:uppercase;
+  color:var(--gold);font-weight:600;margin-bottom:14px;
+}
+.sec-title{
+  font-family:'Cormorant Garamond',serif;
+  font-size:clamp(28px,5vw,56px);font-weight:300;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink);
+}
+.sec-title em{font-style:italic;color:var(--gold2);}
+.sec-rule{
+  width:1px;height:48px;
+  background:linear-gradient(to bottom,var(--gold),transparent);
+  margin:18px auto;
+}
+.sec-sub{font-size:11px;color:var(--muted2);letter-spacing:.1em;}
+
+/* ── CARDS GRID ── */
+.cards-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(340px,1fr));
+  gap:24px;
+}
+
+.prop-card{
+  background:var(--white);
+  position:relative;overflow:hidden;
+  border:1px solid var(--warm3);
+  animation:cardReveal .6s ease both;
+  transition:transform .4s cubic-bezier(.16,1,.3,1), box-shadow .4s ease, border-color .3s;
+  border-radius:2px;
+}
+.prop-card:hover{
+  transform:translateY(-8px);
+  box-shadow:0 24px 60px var(--shadow3),0 0 0 1px var(--gold-border);
+  border-color:var(--gold-border2);
+}
+@keyframes cardReveal{
+  from{opacity:0;transform:translateY(30px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+/* Card shimmer on hover */
+.prop-card::before{
+  content:'';
+  position:absolute;inset:0;
+  background:linear-gradient(135deg,transparent 40%,rgba(212,169,41,.04) 50%,transparent 60%);
+  opacity:0;
+  transition:opacity .4s;
+  z-index:0;
+  pointer-events:none;
+}
+.prop-card:hover::before{opacity:1;}
+
+.prop-card:hover .card-img{transform:scale(1.05);}
+.card-img-wrap{position:relative;height:256px;overflow:hidden;background:var(--warm);}
+.card-img,.card-video{width:100%;height:100%;object-fit:cover;transition:transform .7s cubic-bezier(.16,1,.3,1);display:block;}
+.card-img-ph{
+  width:100%;height:100%;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;
+  background:var(--warm);
+}
+.card-img-ph span{font-size:9px;letter-spacing:.18em;color:var(--muted2);text-transform:uppercase;}
+.card-overlay{
+  position:absolute;inset:0;
+  background:linear-gradient(to top,rgba(26,21,16,.55) 0%,transparent 50%);
+  pointer-events:none;
+}
+.card-badge{
+  position:absolute;top:14px;left:14px;z-index:3;
+  font-size:8px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;padding:5px 11px;
+}
+.badge-v{background:var(--gold);color:var(--white);}
+.badge-a{border:1px solid var(--gold);color:var(--gold);background:rgba(255,255,255,.85);backdrop-filter:blur(6px);}
+.card-cert{
+  position:absolute;top:14px;right:14px;z-index:3;
+  font-size:8px;padding:4px 9px;
+  border:1px solid rgba(255,255,255,.3);
+  background:rgba(255,255,255,.7);
+  backdrop-filter:blur(8px);
+  color:var(--ink);letter-spacing:.06em;
+}
+.card-dots{position:absolute;bottom:11px;left:50%;transform:translateX(-50%);display:flex;gap:5px;z-index:3;}
+.dot{width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.4);transition:all .25s;}
+.dot.on{background:var(--white);width:14px;border-radius:2px;}
+.card-arrow{
+  position:absolute;top:50%;transform:translateY(-50%);
+  width:30px;height:30px;border-radius:50%;
+  background:rgba(255,255,255,.82);
+  backdrop-filter:blur(8px);border:1px solid rgba(184,134,11,.2);
+  color:var(--gold);font-size:14px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:none;z-index:4;
+  opacity:0;transition:opacity .2s,background .2s;
+}
+.prop-card:hover .card-arrow{opacity:1;}
+.card-arrow.left{left:9px;}.card-arrow.right{right:9px;}
+.card-arrow:hover{background:var(--gold);color:var(--white);}
+
+.card-body{padding:22px;border-top:1px solid var(--warm2);position:relative;z-index:1;}
+.card-tipo{font-size:8px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:6px;}
+.card-nombre{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;color:var(--ink);margin-bottom:5px;line-height:1.2;}
+.card-loc{font-size:10px;color:var(--muted2);display:flex;align-items:center;gap:5px;margin-bottom:14px;}
+.card-precio{font-family:'Cormorant Garamond',serif;font-size:25px;font-weight:300;color:var(--gold2);margin-bottom:14px;}
+.card-specs{
+  display:flex;gap:14px;margin-bottom:14px;
+  padding-bottom:13px;border-bottom:1px solid var(--warm2);flex-wrap:wrap;
+}
+.cspec-v{font-size:12px;color:var(--ink);font-weight:500;}
+.cspec-l{font-size:10px;color:var(--muted2);}
+.card-desc{
+  font-size:11px;color:var(--muted);line-height:1.75;margin-bottom:16px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.btn-ver{
+  width:100%;padding:11px;
+  border:1px solid var(--gold-border2);background:transparent;color:var(--gold);
+  font-family:'Outfit',sans-serif;font-size:9px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;
+  cursor:none;transition:all .28s;
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  position:relative;overflow:hidden;
+}
+.btn-ver::before{
+  content:'';position:absolute;inset:0;
+  background:var(--gold);
+  transform:translateX(-101%);transition:transform .28s cubic-bezier(.16,1,.3,1);
+}
+.btn-ver:hover{color:var(--white);}
+.btn-ver:hover::before{transform:translateX(0);}
+.btn-ver span,.btn-ver svg{position:relative;z-index:1;}
+.btn-ver svg{transition:transform .22s;}
+.btn-ver:hover svg{transform:translateX(5px);}
+
+.empty{
+  grid-column:1/-1;text-align:center;padding:90px 24px;
+  border:1px solid var(--warm3);background:var(--white);
+}
+.empty h3{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;color:var(--ink);margin-bottom:9px;margin-top:16px;}
+.empty p{font-size:12px;color:var(--muted2);margin-bottom:24px;}
+
+/* ── CONTACTO ── */
+#contacto{padding:90px 40px;position:relative;z-index:1;}
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px;max-width:920px;margin:0 auto;}
+.contact-box{
+  background:var(--white);
+  border:1px solid var(--warm3);padding:36px 32px;
+  transition:border-color .3s,box-shadow .3s;
+}
+.contact-box:hover{border-color:var(--gold-border2);box-shadow:0 8px 32px var(--shadow2);}
+.social-link{
+  display:flex;align-items:center;gap:15px;padding:14px 16px;
+  border:1px solid;border-radius:2px;text-decoration:none;
+  font-family:'Outfit',sans-serif;transition:all .25s;margin-bottom:10px;
+}
+.social-link:last-child{margin-bottom:0;}
+.social-link:hover{transform:translateX(5px);}
+.social-info div:first-child{font-size:12px;font-weight:500;letter-spacing:.04em;}
+.social-info div:last-child{font-size:10px;opacity:.5;margin-top:2px;}
+.cfield{display:flex;flex-direction:column;gap:5px;margin-bottom:10px;}
+.clabel{font-size:9px;font-weight:600;color:var(--gold);letter-spacing:.16em;text-transform:uppercase;}
+.cinput{
+  padding:11px 13px;
+  border:1px solid var(--warm3);background:var(--cream);color:var(--text);
+  font-family:'Outfit',sans-serif;font-size:13px;font-weight:300;outline:none;
+  transition:border-color .2s,background .2s;width:100%;
+}
+.cinput::placeholder{color:var(--muted2);font-size:11px;}
+.cinput:focus{border-color:var(--gold);background:var(--white);}
+
+/* ── FOOTER ── */
+footer{
+  border-top:1px solid var(--warm3);padding:56px 40px;text-align:center;
+  background:var(--ink);position:relative;z-index:1;overflow:hidden;
+}
+footer::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 60% 40% at 50% 50%,rgba(184,134,11,.08) 0%,transparent 70%);
+  pointer-events:none;
+}
+.footer-name{font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:300;letter-spacing:.16em;text-transform:uppercase;color:var(--white);}
+.footer-sub{font-size:9px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold3);margin:8px 0 20px;}
+.footer-rule{width:38px;height:1px;background:var(--gold);opacity:.35;margin:0 auto 16px;}
+.footer-copy{font-size:9px;color:rgba(255,255,255,.28);}
+
+/* ── OVERLAYS base ── */
+.overlay{
+  position:fixed;inset:0;
+  background:rgba(253,250,245,.7);
+  backdrop-filter:blur(20px);
+  z-index:600;
+  display:flex;align-items:center;justify-content:center;
+  padding:16px;opacity:0;pointer-events:none;
+  transition:opacity .35s;
+}
+.overlay.open{opacity:1;pointer-events:all;}
+
+/* ── DETAIL MODAL ── */
+.dmodal{
+  background:var(--white);width:100%;max-width:960px;max-height:93vh;
+  overflow-y:auto;
+  border:1px solid var(--warm3);
+  transform:scale(.96) translateY(18px);
+  transition:transform .4s cubic-bezier(.16,1,.3,1);
+  box-shadow:0 40px 120px var(--shadow3);
+}
+.overlay.open .dmodal{transform:scale(1) translateY(0);}
+.d-gallery{position:relative;height:420px;overflow:hidden;background:var(--warm);}
+.d-main-img{width:100%;height:100%;object-fit:cover;transition:opacity .3s;}
+.d-main-video{width:100%;height:100%;object-fit:cover;display:block;}
+.d-main-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--warm);}
+.d-arrow{
+  position:absolute;top:50%;transform:translateY(-50%);
+  width:38px;height:38px;
+  background:rgba(255,255,255,.85);border:1px solid var(--gold-border2);
+  color:var(--gold);font-size:18px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:none;z-index:4;transition:all .22s;
+}
+.d-arrow:hover{background:var(--gold);color:var(--white);}
+.d-arrow.left{left:14px;}.d-arrow.right{right:14px;}
+.d-thumbs-wrap{
+  position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
+  display:flex;gap:6px;z-index:4;max-width:86%;overflow-x:auto;
+}
+.d-thumb{width:46px;height:35px;object-fit:cover;border:1.5px solid transparent;cursor:none;opacity:.45;transition:all .22s;flex-shrink:0;}
+.d-thumb-vid{
+  width:46px;height:35px;border:1.5px solid var(--warm3);
+  cursor:none;opacity:.45;transition:all .22s;flex-shrink:0;
+  background:var(--warm);display:flex;align-items:center;justify-content:center;font-size:14px;
+}
+.d-thumb:hover,.d-thumb.act,.d-thumb-vid:hover,.d-thumb-vid.act{opacity:1;border-color:var(--gold);}
+.d-counter{
+  position:absolute;top:13px;right:54px;
+  background:rgba(255,255,255,.82);border:1px solid var(--gold-border);
+  font-size:9px;color:var(--gold);padding:4px 11px;z-index:4;
+  backdrop-filter:blur(8px);
+}
+.d-close-btn{
+  position:absolute;top:13px;right:13px;z-index:5;
+  width:34px;height:34px;
+  background:rgba(255,255,255,.82);border:1px solid var(--gold-border);
+  color:var(--gold);font-size:16px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:none;transition:all .22s;
+}
+.d-close-btn:hover{background:var(--gold);color:var(--white);}
+.d-body{padding:34px 40px;}
+.d-meta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;}
+.d-badge{font-size:8px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;padding:4px 11px;}
+.d-tipo-lbl{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);}
+.d-cert-badge{font-size:9px;padding:4px 11px;border:1px solid var(--gold-border2);color:var(--gold2);letter-spacing:.07em;}
+.d-nombre{font-family:'Cormorant Garamond',serif;font-size:clamp(26px,4vw,42px);font-weight:400;color:var(--ink);margin-bottom:8px;line-height:1.1;}
+.d-loc{font-size:11px;color:var(--muted2);display:flex;align-items:center;gap:6px;margin-bottom:20px;}
+.d-precio{font-family:'Cormorant Garamond',serif;font-size:clamp(32px,5vw,50px);font-weight:300;color:var(--gold2);margin-bottom:28px;}
+.d-specs{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--warm3);margin-bottom:28px;}
+.d-spec{padding:18px;text-align:center;border-right:1px solid var(--warm3);}
+.d-spec:last-child{border-right:none;}
+.d-spec-v{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;color:var(--gold2);}
+.d-spec-l{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted2);margin-top:4px;}
+.d-desc-lbl{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:10px;}
+.d-desc{font-size:14px;line-height:1.95;color:var(--muted);font-weight:300;margin-bottom:28px;}
+.d-footer{
+  padding:18px 40px;border-top:1px solid var(--warm3);
+  display:flex;gap:10px;justify-content:flex-end;
+  background:var(--warm);
+}
+.btn-ghost{
+  padding:10px 22px;border:1px solid var(--warm3);background:transparent;color:var(--muted);
+  font-family:'Outfit',sans-serif;font-size:9px;letter-spacing:.16em;text-transform:uppercase;
+  cursor:none;transition:all .22s;
+}
+.btn-ghost:hover{border-color:var(--ink3);color:var(--ink);}
+.btn-gold{
+  padding:10px 22px;border:1px solid var(--gold);background:transparent;color:var(--gold);
+  font-family:'Outfit',sans-serif;font-size:9px;letter-spacing:.16em;text-transform:uppercase;
+  cursor:none;transition:all .22s;position:relative;overflow:hidden;
+}
+.btn-gold::before{content:'';position:absolute;inset:0;background:var(--gold);transform:translateX(-101%);transition:transform .22s ease;}
+.btn-gold:hover{color:var(--white);}
+.btn-gold:hover::before{transform:translateX(0);}
+.btn-gold span{position:relative;z-index:1;}
+.btn-danger{
+  padding:10px 22px;border:1px solid rgba(220,80,80,.2);background:transparent;color:rgba(200,80,80,.7);
+  font-family:'Outfit',sans-serif;font-size:9px;letter-spacing:.16em;text-transform:uppercase;
+  cursor:none;transition:all .22s;
+}
+.btn-danger:hover{border-color:rgba(220,80,80,.45);color:#dc5050;}
+
+/* ── ADMIN MODAL ── */
+.admin-modal{
+  background:var(--white);width:100%;max-width:420px;
+  border:1px solid var(--warm3);
+  transform:translateY(24px) scale(.97);
+  transition:transform .35s cubic-bezier(.16,1,.3,1);
+  box-shadow:0 40px 100px var(--shadow3);
+}
+.overlay.open .admin-modal{transform:translateY(0) scale(1);}
+.admin-modal-hdr{
+  background:linear-gradient(135deg,var(--warm),var(--warm2));
+  padding:30px 34px 22px;text-align:center;
+  border-bottom:1px solid var(--warm3);
+}
+.admin-modal-logo{
+  width:54px;height:54px;border-radius:50%;
+  background:linear-gradient(135deg,var(--gold),var(--gold3));
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;margin:0 auto 15px;
+}
+.admin-modal-title{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:300;color:var(--ink);letter-spacing:.07em;margin-bottom:5px;}
+.admin-modal-sub{font-size:10px;color:var(--muted2);letter-spacing:.16em;text-transform:uppercase;}
+.admin-modal-body{padding:30px 34px;}
+.admin-field{margin-bottom:18px;}
+.admin-label{display:block;font-size:9px;font-weight:600;color:var(--gold);letter-spacing:.2em;text-transform:uppercase;margin-bottom:8px;}
+.admin-input{
+  width:100%;padding:13px 15px;
+  border:1px solid var(--warm3);background:var(--cream);color:var(--text);
+  font-family:'Outfit',sans-serif;font-size:14px;font-weight:300;outline:none;
+  transition:all .22s;
+}
+.admin-input:focus{border-color:var(--gold);background:var(--white);box-shadow:0 0 0 3px rgba(184,134,11,.07);}
+.admin-input::placeholder{color:var(--muted2);}
+.admin-error{font-size:11px;color:#dc5050;margin-top:9px;min-height:17px;text-align:center;}
+.admin-btn{
+  width:100%;padding:15px;margin-top:5px;
+  background:linear-gradient(135deg,var(--gold),var(--gold2));
+  border:none;color:var(--white);
+  font-family:'Outfit',sans-serif;font-size:10px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;
+  cursor:none;transition:all .28s;
+}
+.admin-btn:hover{filter:brightness(1.08);transform:translateY(-1px);box-shadow:0 8px 24px rgba(184,134,11,.3);}
+.admin-cancel{
+  display:block;text-align:center;margin-top:17px;
+  font-size:9px;color:var(--muted2);letter-spacing:.16em;text-transform:uppercase;
+  cursor:none;transition:color .22s;
+}
+.admin-cancel:hover{color:var(--ink);}
+
+/* ── ADMIN BAR ── */
+.admin-bar{
+  position:fixed;bottom:0;left:0;right:0;z-index:700;
+  background:rgba(26,21,16,.97);backdrop-filter:blur(14px);
+  border-top:1px solid rgba(184,134,11,.3);
+  padding:11px 18px;display:none;
+  align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap;
+}
+.admin-bar.show{display:flex;}
+.admin-bar-label{
+  font-size:9px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--gold3);display:flex;align-items:center;gap:9px;white-space:nowrap;
+}
+.admin-bar-label::before{content:'';width:7px;height:7px;border-radius:50%;background:#4ade80;display:inline-block;flex-shrink:0;}
+.admin-bar-btns{display:flex;gap:7px;flex-wrap:wrap;flex:1;justify-content:flex-end;}
+.btn-bar{
+  padding:8px 14px;border:1px solid rgba(184,134,11,.3);background:rgba(184,134,11,.08);
+  color:var(--gold3);font-family:'Outfit',sans-serif;font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+  cursor:none;transition:all .22s;white-space:nowrap;
+}
+.btn-bar:hover{background:var(--gold);border-color:var(--gold);color:var(--white);}
+.btn-bar-out{
+  padding:8px 15px;border:1px solid rgba(220,100,100,.2);background:transparent;
+  color:rgba(220,130,130,.7);font-family:'Outfit',sans-serif;font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+  cursor:none;transition:all .22s;
+}
+.btn-bar-out:hover{border-color:rgba(220,100,100,.45);color:#dc6060;}
+
+/* ── FORM MODAL ── */
+.fmodal{
+  background:var(--white);width:100%;max-width:660px;max-height:93vh;
+  overflow-y:auto;border:1px solid var(--warm3);
+  transform:translateY(28px);
+  transition:transform .35s cubic-bezier(.16,1,.3,1);
+  box-shadow:0 40px 120px var(--shadow3);
+}
+.overlay.open .fmodal{transform:translateY(0);}
+.f-hdr{
+  padding:24px 30px;border-bottom:1px solid var(--warm3);
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--warm);
+}
+.f-hdr h2{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;color:var(--ink);letter-spacing:.06em;}
+.f-hdr button{background:none;border:none;color:var(--muted2);font-size:22px;cursor:none;line-height:1;transition:color .2s;}
+.f-hdr button:hover{color:var(--gold);}
+.f-save-top{
+  padding:14px 30px;
+  background:linear-gradient(135deg,rgba(184,134,11,.07),rgba(184,134,11,.03));
+  border-bottom:1px solid var(--warm3);
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+.f-save-top-label{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted2);}
+.btn-save-top{
+  display:inline-flex;align-items:center;gap:8px;padding:13px 30px;
+  border:none;background:var(--gold);color:var(--white);
+  font-family:'Outfit',sans-serif;font-size:10px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;
+  cursor:none;transition:all .25s;
+  box-shadow:0 4px 18px rgba(184,134,11,.3);
+}
+.btn-save-top:hover{filter:brightness(1.08);transform:translateY(-1px);box-shadow:0 8px 24px rgba(184,134,11,.4);}
+.f-body{padding:26px 30px 12px;}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:13px;}
+.field{margin-bottom:15px;}
+.field label{display:block;font-size:9px;font-weight:600;color:var(--gold);letter-spacing:.18em;text-transform:uppercase;margin-bottom:7px;}
+.field input,.field select,.field textarea{
+  width:100%;padding:11px 13px;
+  border:1px solid var(--warm3);background:var(--cream);color:var(--text);
+  font-family:'Outfit',sans-serif;font-size:13px;font-weight:300;outline:none;
+  transition:border-color .2s,background .2s;
+}
+.field input::placeholder,.field textarea::placeholder{color:var(--muted2);font-size:11px;}
+.field input:focus,.field select:focus,.field textarea:focus{
+  border-color:var(--gold);background:var(--white);box-shadow:0 0 0 3px rgba(184,134,11,.06);
+}
+.field select option{background:var(--white);color:var(--text);}
+.field textarea{resize:vertical;min-height:82px;}
+.field-hint{font-size:10px;color:var(--muted2);margin-top:5px;}
+.upload-zone{
+  border:1.5px dashed var(--gold-border2);background:var(--gold-pale);
+  padding:22px;text-align:center;transition:all .22s;border-radius:2px;
+}
+.upload-zone.drag{border-color:var(--gold);background:rgba(184,134,11,.1);}
+.upload-zone-title{font-size:12px;color:var(--ink);margin-bottom:4px;font-weight:500;}
+.upload-zone-sub{font-size:10px;color:var(--muted2);margin-bottom:13px;}
+.upload-zone-sub em{color:var(--gold);font-style:normal;}
+.btn-upload{
+  display:inline-flex;align-items:center;gap:8px;padding:9px 22px;
+  border:1px solid var(--gold);background:transparent;color:var(--gold);
+  font-family:'Outfit',sans-serif;font-size:9px;font-weight:600;letter-spacing:.17em;text-transform:uppercase;
+  cursor:none;transition:all .22s;
+}
+.btn-upload:hover{background:var(--gold);color:var(--white);}
+#fImgInput,#fVidInput{display:none;}
+.preview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:6px;margin-top:10px;}
+.preview-item{position:relative;aspect-ratio:1;overflow:hidden;}
+.preview-item img,.preview-item video{width:100%;height:100%;object-fit:cover;border:1px solid var(--warm3);}
+.p-del{
+  position:absolute;top:3px;right:3px;width:19px;height:19px;
+  background:rgba(255,255,255,.9);border:1px solid var(--warm3);
+  color:var(--muted);font-size:12px;
+  display:flex;align-items:center;justify-content:center;cursor:none;line-height:1;
+  transition:all .18s;
+}
+.p-del:hover{background:var(--gold);border-color:var(--gold);color:var(--white);}
+.preview-item.main-img::after{
+  content:'Principal';position:absolute;bottom:0;left:0;right:0;
+  background:rgba(184,134,11,.9);color:var(--white);
+  font-size:7px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;text-align:center;padding:2px;
+}
+.preview-item.is-vid::before{
+  content:'▶';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-size:18px;color:rgba(255,255,255,.8);pointer-events:none;
+}
+.f-footer{
+  padding:17px 30px 22px;border-top:1px solid var(--warm3);
+  display:flex;gap:11px;justify-content:flex-end;
+  background:var(--warm);margin-top:11px;
+}
+
+.upload-progress{margin-top:9px;height:3px;background:var(--warm2);overflow:hidden;display:none;}
+.upload-progress-bar{height:100%;background:var(--gold);width:0%;transition:width .3s;}
+.upload-progress.show{display:block;}
+
+/* ── THANK YOU ── */
+.ty-box{
+  background:var(--white);border:1px solid var(--warm3);
+  max-width:480px;width:100%;text-align:center;overflow:hidden;
+  box-shadow:0 32px 80px var(--shadow3);
+}
+.ty-hdr{background:var(--warm);padding:32px 36px 22px;border-bottom:1px solid var(--warm3);}
+.ty-body{padding:30px 36px 28px;}
+
+/* ── HUBSPOT ── */
+.hs-form-frame{width:100%;}
+.hs-form-frame iframe{width:100%!important;}
+
+/* ── ADMIN TRIGGER ── */
+.admin-trigger{
+  position:fixed;bottom:30px;left:30px;z-index:800;
+  width:44px;height:44px;border-radius:50%;
+  background:rgba(184,134,11,.07);border:1px solid var(--gold-border);
+  cursor:none;display:flex;align-items:center;justify-content:center;
+  font-size:16px;transition:all .3s;opacity:0.25;
+}
+.admin-trigger:hover{opacity:1;background:var(--gold-pale);border-color:var(--gold-border2);}
+
+/* ── ANIMS ── */
+@keyframes fadeIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:.22}50%{opacity:.7}}
+
+/* ── SCROLL REVEAL ── */
+.reveal{opacity:0;transform:translateY(40px);transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1);}
+.reveal.visible{opacity:1;transform:translateY(0);}
+
+/* ── NUMBER COUNTER on hero ── */
+.hero-stats{
+  display:flex;gap:48px;margin-top:48px;justify-content:center;
+  animation:fadeSlideUp 1s .9s ease both;
+}
+.stat-item{text-align:center;}
+.stat-num{
+  font-family:'Cormorant Garamond',serif;font-size:42px;font-weight:300;
+  color:var(--gold2);line-height:1;
+}
+.stat-lbl{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted2);margin-top:4px;}
+
+/* ── MARQUEE ── */
+.marquee-wrap{
+  overflow:hidden;border-top:1px solid var(--warm3);border-bottom:1px solid var(--warm3);
+  padding:16px 0;position:relative;z-index:1;
+  background:var(--white);
+  cursor:default;
+}
+.marquee-wrap:hover .marquee-track{animation-play-state:paused;}
+.marquee-track{
+  display:flex;gap:0;white-space:nowrap;
+  animation:marqueeScroll 11s linear infinite;
+}
+.marquee-item{
+  font-family:'Cormorant Garamond',serif;
+  font-size:14px;font-style:italic;color:var(--ink3);
+  letter-spacing:.1em;padding:0 32px;
+  display:flex;align-items:center;gap:32px;
+  font-weight:400;
+  transition:color .3s;
+}
+.marquee-item:hover{color:var(--gold2);}
+.marquee-item::after{content:'◆';color:var(--gold);font-size:7px;font-style:normal;}
+@keyframes marqueeScroll{to{transform:translateX(-50%);}}
+
+/* ── MOBILE ── */
+@media(max-width:680px){
+  .nav{padding:0 16px;}
+  #catalogo{padding:80px 14px 60px;}
+  #contacto{padding:64px 16px;}
+  .contact-grid{grid-template-columns:1fr;}
+  .d-body,.d-footer{padding-left:18px;padding-right:18px;}
+  .d-specs{grid-template-columns:repeat(2,1fr);}
+  .d-gallery{height:260px;}
+  .f-body,.f-hdr,.f-footer{padding-left:16px;padding-right:16px;}
+  .f-save-top{padding:12px 16px;}
+  .frow{grid-template-columns:1fr;}
+  .cards-grid{grid-template-columns:1fr;}
+  .hero-stats{gap:24px;}
+  .stat-num{font-size:30px;}
+  body{cursor:auto;}
+  #cursor-dot,#cursor-ring{display:none;}
+}
+
+/* ── v2: idioma, mapa, favoritos, comparador, calculadora ── */
+#langFloat{position:fixed;top:14px;right:14px;z-index:950;background:var(--ink);color:var(--gold-light);border:1px solid var(--gold);padding:7px 13px;font:600 11px Outfit,sans-serif;letter-spacing:.12em;cursor:pointer;border-radius:30px}
+.nav-right{padding-right:64px}
+.fav-btn,.cmp-btn{position:absolute;right:10px;z-index:5;width:34px;height:34px;border-radius:50%;border:0;background:rgba(255,255,255,.92);color:#777;font-size:16px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.fav-btn{top:10px}.cmp-btn{top:50px;font-size:15px}.fav-btn.on{color:#e11d48}.cmp-btn.on{background:var(--gold);color:#fff}
+#fabs{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:900;display:none;gap:8px}
+#fabs button{background:var(--ink);color:var(--gold-light);border:1px solid var(--gold);padding:11px 18px;font:600 11px Outfit,sans-serif;letter-spacing:.08em;cursor:pointer;border-radius:30px;box-shadow:0 6px 20px rgba(0,0,0,.3)}
+.gpad{padding:26px 22px}.gt{font-family:'Cormorant Garamond',serif;font-size:26px;margin-bottom:14px}
+.grow{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--warm2)}.grow img{width:64px;height:48px;object-fit:cover}.grow div{flex:1;display:flex;flex-direction:column;font-size:13px}.grow span{color:var(--gold);font-weight:600}.grow button{border:1px solid var(--gold-border2);background:none;padding:7px 12px;cursor:pointer}
+.gwa{display:block;text-align:center;margin-top:16px;padding:13px;background:#25D366;color:#fff;text-decoration:none;font:700 11px Outfit,sans-serif;letter-spacing:.14em;text-transform:uppercase}
+.gtbl{border-collapse:collapse;font-size:12px;min-width:480px;width:100%}.gtbl th,.gtbl td{padding:9px;border-bottom:1px solid var(--warm2);text-align:left;vertical-align:top}.gtbl img{width:110px;height:75px;object-fit:cover}
+.calc{border:1px solid var(--gold-border2);background:var(--cream);padding:18px;margin:18px 0;display:flex;flex-direction:column;gap:6px;max-width:520px}.calc h4{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500}.calc label{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-top:6px}.calc input,.calc select{padding:10px;border:1px solid var(--warm3);font:13px Outfit,sans-serif;background:#fff}.calc small{font-size:10px;color:var(--muted2)}
+.cout{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.cout div{background:#fff;border:1px solid var(--warm2);padding:10px;font-size:10px;color:var(--muted2)}.cout b{display:block;font-size:16px;color:var(--ink);margin-top:3px}.cout .big{grid-column:1/3;background:var(--ink)}.cout .big b{color:var(--gold-light);font-size:22px}
+#calculadora{padding:70px 20px;display:flex;flex-direction:column;align-items:center}
+.dx{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 14px}.dx button,.dx a{border:1px solid var(--gold-border2);background:none;padding:9px 14px;font:500 11px Outfit,sans-serif;color:var(--ink);cursor:pointer;text-decoration:none}.dx .on{color:#e11d48;border-color:#e11d48}
+#pMap{height:min(72vh,560px);border:1px solid var(--gold-border2);z-index:1}
+.legend{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;font-size:11px;color:var(--muted);margin-bottom:12px}.legend i{display:inline-block;width:12px;height:12px;margin-right:5px;vertical-align:-1px;border-radius:2px}
+#zChips{display:flex;gap:8px;overflow-x:auto;padding:12px 0}.zchip{flex:none;border:1px solid var(--gold-border2);background:var(--white);padding:8px 14px;font:12px Outfit,sans-serif;cursor:pointer;border-radius:30px}
+.zb{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;background:var(--gold);color:#fff;font:600 12px Outfit,sans-serif;padding:8px 14px;border-radius:30px;border:2px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.4);cursor:pointer}.zb b{background:#fff;color:var(--gold);border-radius:20px;padding:1px 7px;margin-left:7px}
+.ptip{background:rgba(26,21,16,.88);color:#fff;border:0;font:600 11px Outfit,sans-serif}
+.dov{position:fixed;inset:0;z-index:9500;background:#000;display:none;flex-direction:column}.dov.open{display:flex}.dbar{display:flex;gap:8px;align-items:center;padding:10px;background:var(--ink);color:#fff;font:12px Outfit,sans-serif;flex-wrap:wrap}.dbar button{padding:9px 14px;border:0;background:var(--gold);color:#fff;font:600 11px Outfit,sans-serif;cursor:pointer}#drawMap{flex:1}
+
+/* ── v3: mapa arriba, zonas, financiamiento, chatbot ── */
+#mapa{padding:70px 0 10px}
+.zone-bar{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:0 20px 28px;max-width:900px;margin:0 auto}
+.zbtn{border:1px solid var(--gold-border2);background:var(--white);color:var(--muted);padding:9px 16px;font:500 11px Outfit,sans-serif;letter-spacing:.06em;border-radius:30px;cursor:pointer}
+.zbtn.on{background:var(--ink);color:var(--gold-light);border-color:var(--ink)}
+.fin-tag{font-size:10px;letter-spacing:.06em;color:var(--gold2);margin:-6px 0 12px;font-weight:600}
+.fin-tag.cash{color:var(--muted2);font-weight:500}
+.calc .cpr{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--warm2);padding:6px 0;font-size:12px;color:var(--muted2)}
+.calc .cpr b{font-size:18px;color:var(--ink);font-family:'Cormorant Garamond',serif}
+.calc .chint{font-size:10px;color:var(--muted2)}
+.calc.cash p{font-size:12px;color:var(--muted);line-height:1.7}
+.vtx{background:#B8860B;border:2px solid #fff;border-radius:50%}
+/* chatbot */
+#cb{position:fixed;right:16px;bottom:16px;z-index:920;font-family:Outfit,sans-serif}
+#cbFab{display:flex;align-items:center;gap:8px;background:var(--gold);color:#fff;border:2px solid #fff;border-radius:40px;padding:12px 18px;font:600 12px Outfit,sans-serif;letter-spacing:.06em;box-shadow:0 8px 26px rgba(0,0,0,.35);cursor:pointer}
+#cbFab b{font-size:18px}
+#cbBox{display:none;flex-direction:column;position:absolute;right:0;bottom:62px;width:min(360px,calc(100vw - 32px));height:min(520px,calc(100vh - 110px));background:var(--cream);border:1px solid var(--gold-border2);box-shadow:0 18px 50px rgba(0,0,0,.35)}
+#cbBox.open{display:flex}
+#cbHead{background:var(--ink);color:var(--gold-light);padding:13px 16px;display:flex;justify-content:space-between;align-items:center;font:600 12px Outfit,sans-serif;letter-spacing:.12em;text-transform:uppercase}
+#cbHead button{background:none;border:0;color:#fff;font-size:22px;cursor:pointer;line-height:1}
+#cbMsgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:9px}
+.cbm{max-width:88%;padding:10px 13px;font-size:13px;line-height:1.55;border-radius:3px;word-wrap:break-word}
+.cbm.bot{background:#fff;border:1px solid var(--warm3);color:var(--text);align-self:flex-start}
+.cbm.me{background:var(--gold);color:#fff;align-self:flex-end}
+.cbm input{width:100%;margin-top:7px;padding:9px;border:1px solid var(--warm3);font:13px Outfit,sans-serif}
+.cbm button.cbgo{margin-top:8px;width:100%;padding:10px;border:0;background:var(--ink);color:var(--gold-light);font:600 11px Outfit,sans-serif;letter-spacing:.1em;cursor:pointer}
+.cbm a.cbwa{display:block;margin-top:8px;text-align:center;padding:10px;background:#25D366;color:#fff;text-decoration:none;font:700 11px Outfit,sans-serif;letter-spacing:.1em}
+.cbc{display:flex;gap:10px;margin-top:8px;border:1px solid var(--warm3);background:var(--cream);cursor:pointer;align-items:center}
+.cbc img{width:70px;height:62px;object-fit:cover;flex:none;background:var(--warm2)}
+.cbc div{display:flex;flex-direction:column;padding:6px 8px 6px 0;font-size:12px;min-width:0}
+.cbc b{font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cbc span{color:var(--gold2);font-weight:600}
+.cbc small{color:var(--muted2);font-size:10px}
+#cbQR{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 8px}
+#cbQR button{border:1px solid var(--gold-border2);background:#fff;color:var(--ink);padding:8px 12px;font:500 11px Outfit,sans-serif;border-radius:30px;cursor:pointer}
+#cbIn{display:flex;border-top:1px solid var(--warm3)}
+#cbIn input{flex:1;border:0;padding:13px;font:13px Outfit,sans-serif;background:#fff;outline:none}
+#cbIn button{border:0;background:var(--gold);color:#fff;padding:0 18px;font-size:16px;cursor:pointer}
+#fabs{bottom:84px}
+
+</style>
+</head>
+<body>
+
+<!-- CURSOR -->
+<div id="cursor-dot"></div>
+<div id="cursor-ring"></div>
+
+<!-- BG CANVAS -->
+<canvas id="bgCanvas"></canvas>
+
+<!-- LOADING -->
+<div id="loadingScreen">
+  <div class="load-sun-wrap">
+    <!-- Premium sun SVG - minimalist line art style -->
+    <svg class="load-sun-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Core circle -->
+      <circle cx="100" cy="100" r="28" stroke="#B8860B" stroke-width="1.5"/>
+      <circle cx="100" cy="100" r="22" stroke="#B8860B" stroke-width="0.7" opacity="0.5"/>
+      <!-- Main rays - long wavy -->
+      <path d="M100 62 C98 54, 102 46, 100 38" stroke="#B8860B" stroke-width="1.4" stroke-linecap="round"/>
+      <path d="M100 138 C102 146, 98 154, 100 162" stroke="#B8860B" stroke-width="1.4" stroke-linecap="round"/>
+      <path d="M62 100 C54 98, 46 102, 38 100" stroke="#B8860B" stroke-width="1.4" stroke-linecap="round"/>
+      <path d="M138 100 C146 102, 154 98, 162 100" stroke="#B8860B" stroke-width="1.4" stroke-linecap="round"/>
+      <!-- Diagonal rays - wavy -->
+      <path d="M73.4 73.4 C68 66, 64 58, 57.6 52" stroke="#B8860B" stroke-width="1.3" stroke-linecap="round"/>
+      <path d="M126.6 126.6 C132 134, 136 142, 142.4 148" stroke="#B8860B" stroke-width="1.3" stroke-linecap="round"/>
+      <path d="M126.6 73.4 C134 68, 142 64, 148 57.6" stroke="#B8860B" stroke-width="1.3" stroke-linecap="round"/>
+      <path d="M73.4 126.6 C66 132, 58 136, 52 142.4" stroke="#B8860B" stroke-width="1.3" stroke-linecap="round"/>
+      <!-- Secondary rays - medium, curved -->
+      <path d="M100 68 C97 62, 100.5 57, 99 52" stroke="#B8860B" stroke-width="1" stroke-linecap="round" opacity="0.75"/>
+      <path d="M100 132 C103 138, 99.5 143, 101 148" stroke="#B8860B" stroke-width="1" stroke-linecap="round" opacity="0.75"/>
+      <path d="M68 100 C62 103, 57 99.5, 52 101" stroke="#B8860B" stroke-width="1" stroke-linecap="round" opacity="0.75"/>
+      <path d="M132 100 C138 97, 143 100.5, 148 99" stroke="#B8860B" stroke-width="1" stroke-linecap="round" opacity="0.75"/>
+      <!-- Fine accent rays -->
+      <path d="M83 65 C82 58, 84 52, 82 47" stroke="#B8860B" stroke-width="0.8" stroke-linecap="round" opacity="0.55"/>
+      <path d="M117 65 C118 58, 116 52, 118 47" stroke="#B8860B" stroke-width="0.8" stroke-linecap="round" opacity="0.55"/>
+      <path d="M83 135 C82 142, 84 148, 82 153" stroke="#B8860B" stroke-width="0.8" stroke-linecap="round" opacity="0.55"/>
+      <path d="M117 135 C118 142, 116 148, 118 153" stroke="#B8860B" stroke-width="0.8" stroke-linecap="round" opacity="0.55"/>
+      <path d="M65 83 C58 82, 52 84, 47 82" stroke="#B8860B" stroke-width="0.8" stroke-linecap="round" opacity="0.55"/>
+      <path d="M65 117 C58 118, 52 116, 47 118" stroke="#B8860B" stroke-width="0.8" stroke-linecap="round" opacity="0.55"/>
+      <path d="M135 83 C142 82, 148 84, 153 82" stroke="#B8860B" stroke-width="0.8" stroke-linecap="round" opacity="0.55"/>
+      <path d="M135 117 C142 118, 148 116, 153 118" stroke="#B8860B" stroke-width="0.8" stroke-linecap="round" opacity="0.55"/>
+    </svg>
+    <div class="load-orbit"></div>
+    <div class="load-orbit2"></div>
+  </div>
+  <div class="load-welcome">Bienvenido a</div>
+  <div class="load-brand">Sá<em>as</em>tun</div>
+  <div class="load-sub">Bienes Raíces · Yucatán</div>
+  <div class="load-rule"></div>
+  <div class="load-bar"><div class="load-bar-inner"></div></div>
+  <div class="load-caption">Donde comienzan tus sueños</div>
+</div>
+
+<!-- NAV -->
+<button id="langFloat" onclick="toggleLang()">EN</button>
+<nav class="nav" id="topNav">
+  <div class="nav-left">
+    <img class="nav-logo" src="https://yoonshmmcumulsohpscw.supabase.co/storage/v1/object/public/Multimedia/logo.png" onerror="this.style.display='none'" alt="">
+    <span class="nav-brand">Sáastun <em>Bienes Raíces</em></span>
+  </div>
+  <div class="nav-right">
+    <span class="nav-count" id="navCount"></span>
+    <button class="btn-add" onclick="document.getElementById('contacto').scrollIntoView({behavior:'smooth'})">
+      Contactar
+    </button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-shapes">
+    <div class="shape shape-1"></div>
+    <div class="shape shape-2"></div>
+    <div class="shape shape-3"></div>
+    <div class="shape shape-4"></div>
+    <div class="shape shape-5"></div>
+    <div class="shape shape-6"></div>
+  </div>
+  <div class="particles" id="particles"></div>
+  <div class="hero-orb"></div>
+  <div class="hero-content">
+    <img class="hero-logo" src="https://yoonshmmcumulsohpscw.supabase.co/storage/v1/object/public/Multimedia/logo.png" onerror="this.style.display='none'" alt="Sáastun">
+    <div class="hero-eyebrow">Bienes Raíces Premium</div>
+    <h1 class="hero-title">
+      <span class="hero-title-main">Sáastun</span>
+      <span>Bienes Raíces</span>
+    </h1>
+    <div class="hero-rule"></div>
+    <div class="hero-cats">Mérida · Playa · Ranchos · Fincas · Cenotes · Haciendas · Hectáreas · Terrenos</div>
+    <div class="hero-quienes">
+      <p>Sáastun no es solo una inmobiliaria,<br><em>es donde comienzan tus sueños.</em></p>
+    </div>
+    <div class="hero-cta">
+      <button class="btn-primary" onclick="document.getElementById('catalogo').scrollIntoView({behavior:'smooth'})">
+        <span>Ver propiedades</span>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="5,12 12,19 19,12"/></svg>
+      </button>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-item"><div class="stat-num" id="statProps">0</div><div class="stat-lbl">Propiedades</div></div>
+      <div class="stat-item"><div class="stat-num">2</div><div class="stat-lbl">Años de exp.</div></div>
+      <div class="stat-item"><div class="stat-num">100%</div><div class="stat-lbl">Satisfacción</div></div>
+    </div>
+  </div>
+  <div class="hero-scroll"><span>Explorar</span><div class="scroll-line"></div></div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-wrap">
+  <div class="marquee-track" id="marqueeTrack">
+    <div class="marquee-item">Mérida</div>
+    <div class="marquee-item">Playa</div>
+    <div class="marquee-item">Ranchos</div>
+    <div class="marquee-item">Fincas</div>
+    <div class="marquee-item">Cenotes</div>
+    <div class="marquee-item">Haciendas</div>
+    <div class="marquee-item">Hectáreas</div>
+    <div class="marquee-item">Terrenos</div>
+    <div class="marquee-item">Mérida</div>
+    <div class="marquee-item">Playa</div>
+    <div class="marquee-item">Ranchos</div>
+    <div class="marquee-item">Fincas</div>
+    <div class="marquee-item">Cenotes</div>
+    <div class="marquee-item">Haciendas</div>
+    <div class="marquee-item">Hectáreas</div>
+    <div class="marquee-item">Terrenos</div>
+  </div>
+</div>
+
+<!-- MAPA (antes del catálogo) -->
+<section id="mapa">
+  <div class="sec-header reveal">
+    <div class="sec-eyebrow">Ubicaciones</div>
+    <h2 class="sec-title">Explora el <em>mapa</em></h2>
+    <div class="sec-rule"></div>
+    <p class="sec-sub">Toca una zona para ver sus propiedades</p>
+  </div>
+  <div id="mapWrap" style="max-width:1100px;margin:0 auto;padding:0 16px 40px">
+    <div class="legend"><span><i style="background:#B8860B"></i>Casa / Depto</span><span><i style="background:#2e9e5b"></i>Lote / Terreno</span><span><i style="background:#c2410c"></i>Rancho / Finca</span><span><i style="background:#7c2d6b"></i>Hacienda</span><span><i style="background:#0891b2"></i>Cenote</span></div>
+    <div id="pMap"></div><div id="zChips"></div>
+    <p style="text-align:center;font-size:11px;color:var(--muted2)">Acércate para ver cada propiedad marcada sobre el terreno</p>
+  </div>
+</section>
+<div class="divider reveal"></div>
+
+
+<!-- CATALOG -->
+<section id="catalogo">
+  <div class="sec-header reveal">
+    <div class="sec-eyebrow">Portafolio</div>
+    <h2 class="sec-title">Nuestras <em>propiedades</em></h2>
+    <div class="sec-rule"></div>
+    <p class="sec-sub" id="catSub">Cargando...</p>
+  </div>
+
+  <!-- CATEGORY PILLS -->
+  <div class="cat-pills reveal" id="catPills">
+    <button class="cat-pill active" onclick="filterCat('todos',this)">✦ Todos</button>
+    <button class="cat-pill" onclick="filterCat('Casa',this)">🏠 Casas</button>
+    <button class="cat-pill" onclick="filterCat('Terreno',this)">🌿 Terrenos</button>
+    <button class="cat-pill" onclick="filterCat('Rancho',this)">🐄 Ranchos</button>
+    <button class="cat-pill" onclick="filterCat('Finca',this)">🌳 Fincas</button>
+    <button class="cat-pill" onclick="filterCat('Hacienda',this)">🏛️ Haciendas</button>
+    <button class="cat-pill" onclick="filterCat('Hectáreas',this)">📐 Hectáreas</button>
+    <button class="cat-pill" onclick="filterCat('Cenote',this)">💧 Cenotes</button>
+  </div>
+
+  <div id="zoneBar" class="zone-bar"></div>
+  <div class="cards-grid" id="cardsGrid"></div>
+
+
+</section>
+
+<div class="divider reveal"></div>
+
+
+<!-- CONTACTO -->
+<section id="contacto">
+  <div class="sec-header reveal">
+    <div class="sec-eyebrow">Contáctanos</div>
+    <h2 class="sec-title">Hablemos de tu <em>propiedad ideal</em></h2>
+    <div class="sec-rule"></div>
+  </div>
+  <div class="contact-grid reveal">
+    <div class="contact-box">
+      <div style="font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);margin-bottom:20px;font-weight:600">Síguenos</div>
+      <a href="https://wa.me/529992318875" target="_blank" class="social-link" style="border-color:rgba(37,211,102,.3);color:#25D366;background:rgba(37,211,102,.04)">
+        <span style="font-size:21px">📱</span>
+        <div class="social-info"><div>WhatsApp</div><div>Escríbenos directo</div></div>
+        <svg style="margin-left:auto" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12,5 19,12 12,19"/></svg>
+      </a>
+      <a href="https://instagram.com/saastunbienesraices" target="_blank" class="social-link" style="border-color:rgba(225,48,108,.22);color:#E1306C;background:rgba(225,48,108,.04)">
+        <span style="font-size:21px">📸</span>
+        <div class="social-info"><div>Instagram</div><div>@saastunbienesraices</div></div>
+        <svg style="margin-left:auto" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12,5 19,12 12,19"/></svg>
+      </a>
+      <a href="https://tiktok.com/@saastunbienesraices" target="_blank" class="social-link" style="border-color:rgba(0,0,0,.1);color:var(--ink);background:rgba(0,0,0,.03)">
+        <span style="font-size:21px">🎵</span>
+        <div class="social-info"><div>TikTok</div><div>@saastunbienesraices</div></div>
+        <svg style="margin-left:auto" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12,5 19,12 12,19"/></svg>
+      </a>
+      <a href="https://www.youtube.com/@S%C3%A1astunbienesraices" target="_blank" class="social-link" style="border-color:rgba(255,0,0,.25);color:#E00000;background:rgba(255,0,0,.04)">
+        <span style="font-size:21px">▶️</span>
+        <div class="social-info"><div>YouTube</div><div>@Sáastunbienesraices</div></div>
+        <svg style="margin-left:auto" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12,5 19,12 12,19"/></svg>
+      </a>
+    </div>
+    <div class="contact-box">
+      <div style="font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);margin-bottom:20px;font-weight:600">Agendar una cita</div>
+      <div id="contactFormWrap">
+        <div class="cform-field"><label class="cform-label">Nombre completo *</label><input class="cform-input" id="cf_nombre" type="text" placeholder="Tu nombre"></div>
+        <div class="cform-field"><label class="cform-label">Teléfono *</label><input class="cform-input" id="cf_tel" type="tel" placeholder="10 dígitos"></div>
+        <div class="cform-field"><label class="cform-label">Zona de interés</label>
+          <select class="cform-input" id="cf_zona">
+            <option value="">— Selecciona —</option>
+            <option>Mérida</option><option>Costa Yucateca</option><option>Interior del Estado</option><option>Cualquiera</option>
+          </select>
+        </div>
+        <div class="cform-field"><label class="cform-label">Tipo de propiedad</label>
+          <select class="cform-input" id="cf_tipo">
+            <option value="">— Selecciona —</option>
+            <option>Casa</option><option>Terreno</option><option>Rancho</option><option>Finca</option><option>Hacienda</option><option>Hectáreas</option><option>Cenote</option>
+          </select>
+        </div>
+        <div class="cform-field"><label class="cform-label">Presupuesto aproximado</label>
+          <select class="cform-input" id="cf_presupuesto">
+            <option value="">— Selecciona —</option>
+            <option>Menos de $1 MDP</option><option>$1 - $3 MDP</option><option>$3 - $6 MDP</option><option>$6 - $10 MDP</option><option>Más de $10 MDP</option>
+          </select>
+        </div>
+        <div class="cform-field"><label class="cform-label">¿Cuándo piensa adquirir?</label>
+          <select class="cform-input" id="cf_cuando">
+            <option value="">— Selecciona —</option>
+            <option>De inmediato</option><option>Menos de 3 meses</option><option>Menos de 6 meses</option><option>En este año</option><option>Aún no he decidido</option>
+          </select>
+        </div>
+        <div class="cform-field"><label class="cform-label">¿Requiere escritura o certif. parcelario?</label>
+          <select class="cform-input" id="cf_cert">
+            <option value="">— Selecciona —</option>
+            <option>Escritura pública</option><option>Certificado parcelario</option><option>Cualquiera</option><option>No sé aún</option>
+          </select>
+        </div>
+        <button class="cform-btn" onclick="enviarFormWA()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.847L0 24l6.335-1.509A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.034-1.384l-.361-.214-3.741.981.998-3.648-.235-.374A9.818 9.818 0 1112 21.818z"/></svg>
+          Enviar consulta
+        </button>
+      </div>
+      <div id="contactFormThanks" style="display:none;text-align:center;padding:40px 20px">
+        <div style="font-size:44px;margin-bottom:16px">🙏</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--ink);margin-bottom:10px">Gracias por tu confianza</div>
+        <div style="font-size:13px;color:var(--muted2);line-height:1.7">En unos instantes un asesor<br>de Sáastun se pondrá en contacto contigo.</div>
+        <div style="margin-top:24px;width:40px;height:1px;background:var(--gold);margin-inline:auto"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-name" style="color:var(--gold-light)">Sáastun</div>
+  <div class="footer-sub">Bienes Raíces · Yucatán</div>
+  <div class="footer-rule"></div>
+  <div class="footer-copy">© 2025 Sáastun Bienes Raíces · Todos los derechos reservados</div>
+</footer>
+
+<div id="fabs"></div>
+<div class="overlay" id="gOv" onclick="if(event.target===this)closeG()"><div class="dmodal"><div id="gC"></div><div class="d-footer"><button class="btn-ghost" onclick="closeG()">Cerrar</button></div></div></div>
+<!-- DETAIL OVERLAY -->
+<div class="overlay" id="dOverlay" onclick="if(event.target===this)closeD()">
+  <div class="dmodal">
+    <div id="dContent"></div>
+    <div class="d-footer">
+      <button class="btn-ghost" onclick="closeD()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- THANK YOU OVERLAY -->
+<div class="overlay" id="tyOverlay" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="ty-box">
+    <div class="ty-hdr">
+      <div style="font-size:46px;margin-bottom:15px">🏡</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;color:var(--ink);margin-bottom:7px">¡Gracias por contactarnos!</div>
+      <div style="width:40px;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:15px auto"></div>
+    </div>
+    <div class="ty-body">
+      <p style="font-size:13px;color:var(--muted);line-height:1.85;margin-bottom:22px">Tu solicitud fue recibida. Un asesor de <strong style="color:var(--gold2)">Sáastun</strong> se comunicará contigo muy pronto.</p>
+      <a href="https://wa.me/529992318875" target="_blank" style="display:inline-flex;align-items:center;gap:10px;padding:12px 26px;background:rgba(37,211,102,.07);border:1px solid rgba(37,211,102,.28);color:#25D366;text-decoration:none;font-family:'Outfit',sans-serif;font-size:10px;font-weight:500;letter-spacing:.12em;margin-bottom:15px">📱 WhatsApp directo</a><br>
+      <button onclick="document.getElementById('tyOverlay').classList.remove('open')" class="btn-ghost" style="margin-top:9px">Volver al catálogo</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// CUSTOM CURSOR
+// ══════════════════════════════════════════════════════════════
+const dot = document.getElementById('cursor-dot');
+const ring = document.getElementById('cursor-ring');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{
+  mx=e.clientX; my=e.clientY;
+  dot.style.left=mx+'px'; dot.style.top=my+'px';
+});
+function animCursor(){
+  rx+=(mx-rx)*.14; ry+=(my-ry)*.14;
+  ring.style.left=rx+'px'; ring.style.top=ry+'px';
+  requestAnimationFrame(animCursor);
+}
+animCursor();
+document.querySelectorAll('a,button,[onclick]').forEach(el=>{
+  el.addEventListener('mouseenter',()=>document.body.classList.add('cursor-hover'));
+  el.addEventListener('mouseleave',()=>document.body.classList.remove('cursor-hover'));
+});
+
+// ══════════════════════════════════════════════════════════════
+// ANIMATED CANVAS BACKGROUND — Light / premium
+// ══════════════════════════════════════════════════════════════
+(function(){
+  const c=document.getElementById('bgCanvas'); if(!c) return;
+  const ctx=c.getContext('2d'); let W,H;
+  function resize(){W=c.width=window.innerWidth;H=c.height=window.innerHeight;}
+  resize(); window.addEventListener('resize',resize);
+
+  // Soft grid lines
+  const lines=[];
+  for(let i=0;i<6;i++) lines.push({
+    x:Math.random()*100,y:Math.random()*100,
+    vx:(Math.random()-.5)*.008,vy:(Math.random()-.5)*.008,
+    len:60+Math.random()*80,angle:Math.random()*Math.PI,
+    a:.025+Math.random()*.04
+  });
+
+  // Floating orbs
+  const orbs=[];
+  for(let i=0;i<5;i++) orbs.push({
+    x:Math.random()*100,y:Math.random()*100,
+    r:80+Math.random()*200,
+    vx:(Math.random()-.5)*.004,vy:(Math.random()-.5)*.004,
+    a:.03+Math.random()*.05
+  });
+
+  // Dots
+  const dots=[];
+  for(let i=0;i<30;i++) dots.push({
+    x:Math.random()*100,y:Math.random()*100,
+    r:.8+Math.random()*1.6,
+    vx:(Math.random()-.5)*.01,vy:(Math.random()-.5)*.01,
+    a:.04+Math.random()*.12
+  });
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+
+    // Draw orbs
+    orbs.forEach(o=>{
+      const x=(o.x/100)*W,y=(o.y/100)*H;
+      const g=ctx.createRadialGradient(x,y,0,x,y,o.r);
+      g.addColorStop(0,`rgba(212,169,41,${o.a})`);
+      g.addColorStop(1,'rgba(212,169,41,0)');
+      ctx.beginPath();ctx.arc(x,y,o.r,0,Math.PI*2);
+      ctx.fillStyle=g;ctx.fill();
+      o.x+=o.vx;o.y+=o.vy;
+      if(o.x<-20)o.x=120;if(o.x>120)o.x=-20;
+      if(o.y<-20)o.y=120;if(o.y>120)o.y=-20;
+    });
+
+    // Draw lines
+    lines.forEach(l=>{
+      const x=(l.x/100)*W,y=(l.y/100)*H;
+      const dx=Math.cos(l.angle)*l.len*Math.min(W,H)/100;
+      const dy=Math.sin(l.angle)*l.len*Math.min(W,H)/100;
+      ctx.beginPath();
+      ctx.moveTo(x-dx/2,y-dy/2);ctx.lineTo(x+dx/2,y+dy/2);
+      ctx.strokeStyle=`rgba(184,134,11,${l.a})`;ctx.lineWidth=.6;ctx.stroke();
+      l.x+=l.vx;l.y+=l.vy;l.angle+=.003;
+      if(l.x<-10)l.x=110;if(l.x>110)l.x=-10;
+      if(l.y<-10)l.y=110;if(l.y>110)l.y=-10;
+    });
+
+    // Draw dots
+    dots.forEach(d=>{
+      const x=(d.x/100)*W,y=(d.y/100)*H;
+      ctx.beginPath();ctx.arc(x,y,d.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(184,134,11,${d.a})`;ctx.fill();
+      d.x+=d.vx;d.y+=d.vy;
+      if(d.x<0)d.x=100;if(d.x>100)d.x=0;
+      if(d.y<0)d.y=100;if(d.y>100)d.y=0;
+    });
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ══════════════════════════════════════════════════════════════
+// PARTICLES
+// ══════════════════════════════════════════════════════════════
+(function(){
+  const wrap=document.getElementById('particles');
+  function spawn(){
+    const p=document.createElement('div');
+    p.className='particle';
+    p.style.left=Math.random()*100+'%';
+    p.style.top=(60+Math.random()*40)+'%';
+    p.style.animationDuration=(4+Math.random()*6)+'s';
+    p.style.animationDelay=(Math.random()*4)+'s';
+    p.style.width=p.style.height=(1+Math.random()*3)+'px';
+    wrap.appendChild(p);
+    setTimeout(()=>p.remove(),(10+Math.random()*6)*1000);
+  }
+  for(let i=0;i<20;i++) spawn();
+  setInterval(()=>spawn(),800);
+})();
+
+// ══════════════════════════════════════════════════════════════
+// SCROLL REVEAL
+// ══════════════════════════════════════════════════════════════
+const revealObs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');});
+},{threshold:.12});
+document.querySelectorAll('.reveal').forEach(el=>revealObs.observe(el));
+
+// ══════════════════════════════════════════════════════════════
+// NUMBER COUNTER ANIMATION
+// ══════════════════════════════════════════════════════════════
+function animCount(el,target,suffix=''){
+  let start=0;
+  const dur=1600,step=dur/target;
+  const t=setInterval(()=>{
+    start++;
+    el.textContent=start+suffix;
+    if(start>=target)clearInterval(t);
+  },step);
+}
+
+// ══════════════════════════════════════════════════════════════
+// FIREBASE + CLOUDINARY CONFIG
+// ══════════════════════════════════════════════════════════════
+const FIREBASE_CONFIG={
+  apiKey:"AIzaSyDcl-ET1izgBjK9XOdKHyv36qR3KZvghkM",
+  authDomain:"saastun-10d7d.firebaseapp.com",
+  projectId:"saastun-10d7d",
+  storageBucket:"saastun-10d7d.firebasestorage.app",
+  messagingSenderId:"100373828737",
+  appId:"1:100373828737:web:e0d8621a746bf4a306a980"
+};
+const CLOUDINARY_CLOUD='dsobqaixq';
+const CLOUDINARY_PRESET='saastun_upload';
+
+// ── Firebase (inicializado desde scripts en <head>) ───────────
+let _db=null;
+function getDb(){
+  if(_db)return _db;
+  firebase.initializeApp(FIREBASE_CONFIG);
+  _db=firebase.firestore();
+  return _db;
+}
+
+async function fbLoadAll(){
+  try{
+    const db=getDb();
+    const snap=await Promise.race([db.collection('propiedades').get(),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout Firebase')),7000))]);
+    return snap.docs.map(d=>({...d.data(),id:d.id})).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  }catch(e){console.warn('Firebase load:',e);return null;}
+}
+
+function lsGenId(){return 'p_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6);}
+
+// ══════════════════════════════════════════════════════════════
+// CATEGORY FILTER
+// ══════════════════════════════════════════════════════════════
+let _activeCat='todos';
+function filterCat(cat,btn){
+  _activeCat=cat;
+  document.querySelectorAll('.cat-pill').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  refresh();
+}
+
+let _zone='';
+function catProps(){
+  if(_activeCat==='todos')return props;
+  return props.filter(p=>(p.tipo||'').toLowerCase().includes(_activeCat.toLowerCase()));
+}
+function filteredProps(){
+  const a=catProps();
+  if(!_zone)return a;
+  if(_zone==='__otras')return a.filter(p=>!zoneOf(p));
+  return a.filter(p=>zoneOf(p)===_zone);
+}
+function refresh(){render();}
+
+
+// ══════════════════════════════════════════════════════════════
+// EMAILJS
+// ══════════════════════════════════════════════════════════════
+try{emailjs.init('xnd9yjEdqmq7qh_fC');}catch(e){console.warn('EmailJS no disponible',e);}
+
+async function enviarFormWA(){
+  const nombre=document.getElementById('cf_nombre').value.trim();
+  const tel=document.getElementById('cf_tel').value.trim();
+  if(!nombre||!tel){showInlineToast('Por favor llena nombre y teléfono','');return;}
+  const zona=document.getElementById('cf_zona').value;
+  const tipo=document.getElementById('cf_tipo').value;
+  const presupuesto=document.getElementById('cf_presupuesto').value;
+  const cuando=document.getElementById('cf_cuando').value;
+  const cert=document.getElementById('cf_cert').value;
+
+  const btn=document.querySelector('.cform-btn');
+  btn.textContent='Enviando...';btn.disabled=true;
+
+  try{
+    await emailjs.send('service_anfrlqp','template_dfxg89w',{
+      from_name: nombre,
+      to_name: 'Sáastun Bienes Raíces',
+      message: `Nueva consulta recibida:\n\n👤 Nombre: ${nombre}\n📞 Teléfono: ${tel}\n📍 Zona: ${zona||'No especificada'}\n🏠 Tipo: ${tipo||'No especificado'}\n💰 Presupuesto: ${presupuesto||'No especificado'}\n📅 Cuándo: ${cuando||'No especificado'}\n📄 Documento: ${cert||'No especificado'}`,
+      reply_to: 'saastunbienesraices@gmail.com',
+      name: nombre,
+      email: 'saastunbienesraices@gmail.com',
+      title: 'Nueva consulta - Sáastun',
+    });
+    document.getElementById('contactFormWrap').style.display='none';
+    document.getElementById('contactFormThanks').style.display='block';
+  }catch(e){
+    btn.textContent='Enviar consulta';btn.disabled=false;
+    showInlineToast('Error al enviar, intenta de nuevo','');
+  }
+}
+
+// HubSpot (si el widget está activo, se muestra normal)
+function waitForHubSpot(){
+  const check=()=>{
+    const el=document.querySelector('#hubspot-messages-iframe-container');
+    if(el){el.style.removeProperty('display');}
+    else{setTimeout(check,800);}
+  };
+  setTimeout(check,2500);
+}
+
+// ══════════════════════════════════════════════════════════════
+// PROPS DATA
+// ══════════════════════════════════════════════════════════════
+let props=[];
+
+// ══════════════════════════════════════════════════════════════
+// INIT — Firebase + fallback localStorage
+// ══════════════════════════════════════════════════════════════
+async function initApp(){
+  const fbProps=await fbLoadAll();
+  if(fbProps!==null){
+    props=fbProps;
+  } else {
+    // fallback: intenta cargar del localStorage viejo
+    try{const d=localStorage.getItem('saastun_props_v2');props=d?JSON.parse(d):[];}catch(e){props=[];}
+  }
+  try{render();}catch(e){console.error('render',e);}
+  try{initMap();render();}catch(e){console.error('map',e);}
+  hideLoading();
+  setTimeout(()=>{
+    const el=document.getElementById('statProps');
+    if(!el)return;
+    if(props.length>0) animCount(el,props.length);
+    else el.textContent='0';
+  },1200);
+}
+
+// Seguro: si algo falla, la pantalla de carga se quita igual a los 12 s
+setTimeout(()=>{const el=document.getElementById('loadingScreen');if(el){el.classList.add('hide');setTimeout(()=>el.style.display='none',900);}},12000);
+function hideLoading(){
+  const el=document.getElementById('loadingScreen');
+  if(el){setTimeout(()=>{el.classList.add('hide');setTimeout(()=>el.style.display='none',900);},5000);}
+}
+
+// ══════════════════════════════════════════════════════════════
+// RENDER CARDS
+// ══════════════════════════════════════════════════════════════
+const ICONS={'Casa':'🏠','Departamento':'🏢','Lote':'📐','Lote Industrial':'🏗️','Casa de Playa':'🏖️','Terreno Playa':'🌊','Rancho':'🌿','Hacienda':'🏰','Finca':'🌳','Cenote':'💧','Hectáreas':'🗺️','Terreno':'📐'};
+
+function isVideo(url){return /\.(mp4|mov|webm|ogg|avi)(\?|$)/i.test(url);}
+
+function buildMedia(p){
+  const imgs=(p.imgs||[]).map(url=>({url,t:isVideo(url)?'vid':'img'}));
+  const vids=(p.vids||[]).map(url=>({url,t:'vid'}));
+  return[...imgs,...vids];
+}
+
+function renderGrid(){render();}
+function render0(){
+  const grid=document.getElementById('cardsGrid');
+  const sub=document.getElementById('catSub');
+  const nc=document.getElementById('navCount');
+  nc.textContent=props.length+' propiedad'+(props.length!==1?'es':'');
+  sub.textContent=props.length
+    ?props.length+' propiedad'+(props.length!==1?'es disponibles':'disponible')
+    :'Aún no hay propiedades';
+
+  const sc=document.getElementById('statProps');
+  if(sc) sc.textContent=props.length;
+
+  const fp=filteredProps();
+
+  if(!fp.length){
+    grid.innerHTML=`<div class="empty">
+      <div style="font-size:38px;margin-bottom:15px;opacity:.18">🏠</div>
+      <h3>${props.length?'Sin resultados en esta categoría':'Comienza el catálogo'}</h3>
+      <p>${props.length?'Prueba otra categoría':'Pronto agregaremos nuevas propiedades'}</p>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML=fp.map((p,i)=>{
+    const all=buildMedia(p);
+    const first=all[0];
+    const hasMulti=all.length>1;
+    const noTerrain=['Terreno','Cenote','Hectáreas','Lote','Lote Industrial','Terreno Playa'].includes(p.tipo);
+
+    const firstMedia=first
+      ?(first.t==='img'
+          ?`<img class="card-img" id="cimg-${p.id}" src="${first.url}" data-idx="0" data-total="${all.length}" alt="${p.nombre||''}">`
+          :`<video class="card-video" id="cimg-${p.id}" src="${first.url}" muted autoplay loop playsinline data-idx="0" data-total="${all.length}"></video>`)
+      :`<div class="card-img-ph"><div style="font-size:34px;opacity:.12">${ICONS[p.tipo]||'🏠'}</div><span>Sin foto</span></div>`;
+
+    return`<div class="prop-card" style="animation-delay:${i*.07}s">
+      <div class="card-img-wrap">
+        ${firstMedia}
+        <div class="card-overlay"></div><button class="fav-btn ${isFav(p.id)?'on':''}" data-id="${p.id}" onclick="toggleFav(event,'${p.id}')">♥</button><button class="cmp-btn ${inCmp(p.id)?'on':''}" data-id="${p.id}" onclick="toggleCmp(event,'${p.id}')">⚖</button>
+        <span class="card-badge ${p.estado==='Renta'?'badge-a':'badge-v'}">${p.estado||'Venta'}</span>
+        ${p.cert?`<span class="card-cert">${p.cert}</span>`:''}
+        ${hasMulti?`<button class="card-arrow left" onclick="cSlide(event,'${p.id}',-1)">‹</button><button class="card-arrow right" onclick="cSlide(event,'${p.id}',1)">›</button><div class="card-dots">${all.map((_,j)=>`<div class="dot ${j===0?'on':''}" id="cd-${p.id}-${j}"></div>`).join('')}</div>`:''}
+      </div>
+      <div class="card-body">
+        <div class="card-tipo">${locOf(p)?locOf(p)+' · ':(p.zona?p.zona+' · ':'')}${tl(p.tipo||'Propiedad')}</div>
+        <div class="card-nombre">${p.nombre||'Sin nombre'}</div>
+        <div class="card-loc"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>${p.ubicacion||'Sin ubicación'}</div>
+        <div class="card-precio">${p.precio||'Precio a consultar'}</div>${finTag(p)}
+        <div class="card-specs">
+          ${!noTerrain&&p.hab&&p.hab!=='N/A'?`<span class="cspec-v">${p.hab}</span>&nbsp;<span class="cspec-l">hab&nbsp;&nbsp;</span>`:''}
+          ${!noTerrain&&p.banos&&p.banos!=='N/A'?`<span class="cspec-v">${p.banos}</span>&nbsp;<span class="cspec-l">baños&nbsp;&nbsp;</span>`:''}
+          ${p.m2_construccion&&p.m2_construccion!=='N/A'?`<span class="cspec-v">${p.m2_construccion} m²</span>`:''}
+          ${p.especial?`<span class="cspec-l" style="color:var(--gold)">&nbsp;&nbsp;${p.especial}</span>`:''}
+        </div>
+        ${p.desc?`<div class="card-desc">${pd(p)}</div>`:''}
+        <button class="btn-ver" onclick="openDetail('${p.id}')"><span>Ver más</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12,5 19,12 12,19"/></svg></button>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Re-observe new cards
+  document.querySelectorAll('.prop-card').forEach(el=>{
+    el.addEventListener('mouseenter',()=>document.body.classList.add('cursor-hover'));
+    el.addEventListener('mouseleave',()=>document.body.classList.remove('cursor-hover'));
+  });
+}
+
+function cSlide(e,id,dir){
+  e.stopPropagation();
+  const p=props.find(x=>x.id===id);if(!p)return;
+  const all=buildMedia(p);
+  const el=document.getElementById('cimg-'+id);if(!el)return;
+  let idx=(parseInt(el.dataset.idx)+dir+all.length)%all.length;
+  const m=all[idx];
+  if((m.t==='img'&&el.tagName==='VIDEO')||(m.t==='vid'&&el.tagName==='IMG')){
+    const neo=m.t==='img'?document.createElement('img'):document.createElement('video');
+    neo.className=m.t==='img'?'card-img':'card-video';
+    neo.id='cimg-'+id;neo.src=m.url;
+    neo.dataset.idx=idx;neo.dataset.total=all.length;
+    if(m.t==='vid'){neo.muted=true;neo.autoplay=true;neo.loop=true;neo.setAttribute('playsinline','');}
+    el.replaceWith(neo);
+  }else{el.src=m.url;el.dataset.idx=idx;}
+  document.querySelectorAll(`[id^="cd-${id}-"]`).forEach((d,i)=>d.classList.toggle('on',i===idx));
+}
+
+// ══════════════════════════════════════════════════════════════
+// DETAIL
+// ══════════════════════════════════════════════════════════════
+let dIdx=0,dProp=null,dAll=[];
+
+function openDetail(id){
+  dProp=props.find(x=>x.id===id);if(!dProp)return;
+  dAll=buildMedia(dProp);dIdx=0;
+  const noTerrain=['Terreno','Cenote','Hectáreas','Lote','Lote Industrial','Terreno Playa'].includes(dProp.tipo);
+  function mm(m){
+    if(!m)return`<div class="d-main-ph"><div style="font-size:52px;opacity:.08">${ICONS[dProp.tipo]||'🏠'}</div></div>`;
+    if(m.t==='img')return`<img class="d-main-img" id="dMainMedia" src="${m.url}" alt="">`;
+    return`<video class="d-main-video" id="dMainMedia" src="${m.url}" controls autoplay muted playsinline></video>`;
+  }
+  function th(m,i){
+    if(m.t==='img')return`<img class="d-thumb ${i===0?'act':''}" id="dth-${i}" src="${m.url}" onclick="dGoTo(${i})">`;
+    return`<div class="d-thumb-vid ${i===0?'act':''}" id="dth-${i}" onclick="dGoTo(${i})">▶</div>`;
+  }
+  document.getElementById('dContent').innerHTML=`
+    <div class="d-gallery">
+      ${mm(dAll[0])}
+      <button class="d-close-btn" onclick="closeD()">×</button>
+      ${dAll.length>1?`<button class="d-arrow left" onclick="dSlide(-1)">‹</button><button class="d-arrow right" onclick="dSlide(1)">›</button><div class="d-counter" id="dCnt">1/${dAll.length}</div><div class="d-thumbs-wrap">${dAll.map((m,i)=>th(m,i)).join('')}</div>`:''}
+    </div>
+    <div class="d-body">
+      <div class="d-meta">
+        <span class="d-badge ${dProp.estado==='Renta'?'badge-a':'badge-v'}">${dProp.estado||'Venta'}</span>
+        <span class="d-tipo-lbl">${ICONS[dProp.tipo]||''} ${tl(dProp.tipo||'')}</span>
+        ${dProp.cert?`<span class="d-cert-badge">${dProp.cert}</span>`:''}
+      </div>
+      <div class="d-nombre">${dProp.nombre||'Sin nombre'}</div>
+      <div class="d-loc"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>${dProp.ubicacion||'Sin ubicación'}</div>
+      <div class="d-precio">${dProp.precio||'Precio a consultar'}</div>
+      <div class="d-specs">
+        ${!noTerrain?`<div class="d-spec"><div class="d-spec-v">${dProp.hab||'N/A'}</div><div class="d-spec-l">Habitaciones</div></div>`:''}
+        ${!noTerrain?`<div class="d-spec"><div class="d-spec-v">${dProp.banos||'N/A'}</div><div class="d-spec-l">Baños</div></div>`:''}
+        <div class="d-spec"><div class="d-spec-v">${dProp.m2_construccion||'N/A'}</div><div class="d-spec-l">M² Constr.</div></div>
+        <div class="d-spec"><div class="d-spec-v">${dProp.m2_terreno||'N/A'}</div><div class="d-spec-l">M² Terreno</div></div>
+      </div>
+      <div class="d-specs" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
+        <div class="d-spec"><div class="d-spec-v" style="font-size:16px">${dProp.garaje||'N/A'}</div><div class="d-spec-l">Garaje</div></div>
+        <div class="d-spec"><div class="d-spec-v" style="font-size:16px">${dProp.alberca||'N/A'}</div><div class="d-spec-l">Alberca</div></div>
+        <div class="d-spec"><div class="d-spec-v" style="font-size:16px">${dProp.amueblado||'N/A'}</div><div class="d-spec-l">Amueblado</div></div>
+      </div>
+      <div class="d-specs" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
+        <div class="d-spec"><div class="d-spec-v" style="font-size:16px">${dProp.antiguedad||'N/A'}</div><div class="d-spec-l">Antigüedad</div></div>
+        <div class="d-spec"><div class="d-spec-v" style="font-size:16px">${dProp.construccion||'N/A'}</div><div class="d-spec-l">Construcción</div></div>
+        <div class="d-spec"><div class="d-spec-v" style="font-size:16px">${dProp.terreno||'N/A'}</div><div class="d-spec-l">Terreno</div></div>
+      </div>
+      ${dProp.amenidades?`<div style="margin-bottom:15px;font-size:12px;color:var(--muted)"><span style="color:var(--gold);font-size:9px;letter-spacing:.16em;text-transform:uppercase;display:block;margin-bottom:5px">Amenidades</span>${dProp.amenidades}</div>`:''}
+      ${dProp.especial?`<div style="margin-bottom:18px;font-size:13px;color:var(--gold)">✦ ${dProp.especial}</div>`:''}
+      ${dProp.desc?`<div class="d-desc-lbl">Descripción</div><div class="d-desc">${pd(dProp)}</div>`:''}
+    </div>`;
+  {const b=document.querySelector('#dContent .d-body');if(b){b.insertAdjacentHTML('beforeend',detailExtras(dProp));calcRun();applyLang();}}
+  document.getElementById('dOverlay').classList.add('open');
+}
+
+function dSlide(dir){dGoTo((dIdx+dir+dAll.length)%dAll.length);}
+function dGoTo(idx){
+  dIdx=idx;const m=dAll[idx];
+  const old=document.getElementById('dMainMedia');
+  if(old){
+    if(m.t==='img'){
+      if(old.tagName==='VIDEO'){const neo=document.createElement('img');neo.className='d-main-img';neo.id='dMainMedia';neo.src=m.url;old.replaceWith(neo);}
+      else{old.style.opacity='0';setTimeout(()=>{old.src=m.url;old.style.opacity='1';},260);}
+    }else{
+      const neo=document.createElement('video');neo.className='d-main-video';neo.id='dMainMedia';neo.src=m.url;neo.controls=true;neo.autoplay=true;neo.muted=true;neo.setAttribute('playsinline','');old.replaceWith(neo);
+    }
+  }
+  document.querySelectorAll('[id^="dth-"]').forEach((t,i)=>t.classList.toggle('act',i===idx));
+  const c=document.getElementById('dCnt');if(c)c.textContent=(idx+1)+'/'+dAll.length;
+}
+function closeD(){document.getElementById('dOverlay').classList.remove('open');}
+
+
+// ══════════════════════════════════════════════════════════════
+// INLINE TOAST
+// ══════════════════════════════════════════════════════════════
+let _toastTimer;
+function showInlineToast(msg,type='success'){
+  let toast=document.getElementById('inlineToast');
+  if(!toast){
+    toast=document.createElement('div');
+    toast.id='inlineToast';
+    toast.style.cssText='position:fixed;top:22px;right:22px;z-index:9999;padding:14px 22px;font-family:Outfit,sans-serif;font-size:11px;font-weight:500;letter-spacing:.07em;border:1px solid;backdrop-filter:blur(14px);max-width:340px;transform:translateX(130%);transition:transform .38s cubic-bezier(.16,1,.3,1);border-radius:1px;';
+    document.body.appendChild(toast);
+  }
+  if(type==='success'){
+    toast.style.background='rgba(74,222,128,.08)';
+    toast.style.borderColor='rgba(74,222,128,.3)';
+    toast.style.color='#22a356';
+  }else{
+    toast.style.background='rgba(220,80,80,.07)';
+    toast.style.borderColor='rgba(220,80,80,.28)';
+    toast.style.color='#dc5050';
+  }
+  toast.textContent=msg;
+  toast.style.transform='translateX(0)';
+  clearTimeout(_toastTimer);
+  _toastTimer=setTimeout(()=>{toast.style.transform='translateX(130%)';},4500);
+}
+
+// ══════════════════════════════════════════════════════════════
+// NAV SCROLL
+// ══════════════════════════════════════════════════════════════
+window.addEventListener('scroll',()=>{
+  document.getElementById('topNav').classList.toggle('show',window.scrollY>window.innerHeight*.4);
+});
+
+
+// ═══ v2: idioma · mapa · favoritos · comparador · calculadora ═══
+const I18N={'Casa':'House','Departamento':'Apartment','Lote':'Lot','Lote Industrial':'Industrial lot','Casa de Playa':'Beach house','Terreno Playa':'Beachfront land','Rancho':'Ranch','Hacienda':'Hacienda','Finca':'Estate','Cenote':'Cenote','Hectáreas':'Hectares','Terreno':'Land','Playa':'Beach','Ranchos':'Ranches','Fincas':'Estates','Cenotes':'Cenotes','Haciendas':'Haciendas','Terrenos':'Land',
+'✦ Todos':'✦ All','🏠 Casas':'🏠 Houses','🌿 Terrenos':'🌿 Land','🐄 Ranchos':'🐄 Ranches','🌳 Fincas':'🌳 Estates','🏛️ Haciendas':'🏛️ Haciendas','📐 Hectáreas':'📐 Hectares','💧 Cenotes':'💧 Cenotes',
+'Bienes Raíces':'Real Estate','Bienes Raíces Premium':'Premium Real Estate','Mérida · Playa · Ranchos · Fincas · Cenotes · Haciendas · Hectáreas · Terrenos':'Mérida · Beach · Ranches · Estates · Cenotes · Haciendas · Hectares · Land','Sáastun no es solo una inmobiliaria,':'Sáastun is not just a real estate agency,','es donde comienzan tus sueños.':'it is where your dreams begin.','Ver propiedades':'View properties','Propiedades':'Properties','Años de exp.':'Years of exp.','Satisfacción':'Satisfaction','Explorar':'Explore',
+'Portafolio':'Portfolio','Nuestras':'Our','propiedades':'properties','Catálogo':'Catalog','🗺️ Mapa':'🗺️ Map','Financiamiento':'Financing','Calcula tus':'Calculate your','mensualidades':'monthly payments',
+'Contáctanos':'Contact us','Hablemos de tu':"Let's talk about your",'propiedad ideal':'ideal property','Síguenos':'Follow us','Escríbenos directo':'Message us directly','Agendar una cita':'Book an appointment','Nombre completo *':'Full name *','Teléfono *':'Phone *','Zona de interés':'Area of interest','Tipo de propiedad':'Property type','Presupuesto aproximado':'Approximate budget','¿Cuándo piensa adquirir?':'When do you plan to buy?','¿Requiere escritura o certif. parcelario?':'Do you need a deed or parcel certificate?','— Selecciona —':'— Select —','Costa Yucateca':'Yucatán coast','Interior del Estado':'Inland Yucatán','Cualquiera':'Any','Menos de $1 MDP':'Under $1M MXN','$1 - $3 MDP':'$1 - $3M MXN','$3 - $6 MDP':'$3 - $6M MXN','$6 - $10 MDP':'$6 - $10M MXN','Más de $10 MDP':'Over $10M MXN','De inmediato':'Right away','Menos de 3 meses':'Within 3 months','Menos de 6 meses':'Within 6 months','En este año':'This year','Aún no he decidido':"Haven't decided yet",'Escritura pública':'Public deed','Certificado parcelario':'Parcel certificate','No sé aún':'Not sure yet','Enviar consulta':'Send inquiry','Gracias por tu confianza':'Thank you for your trust','En unos instantes un asesor':'In a moment an advisor','de Sáastun se pondrá en contacto contigo.':'from Sáastun will contact you.','Bienes Raíces · Yucatán':'Real Estate · Yucatán','© 2025 Sáastun Bienes Raíces · Todos los derechos reservados':'© 2025 Sáastun Real Estate · All rights reserved',
+'Ver más':'View more','hab':'bd','baños':'ba','Venta':'For sale','Renta':'For rent','Precio a consultar':'Price on request','Sin foto':'No photo','Habitaciones':'Bedrooms','Baños':'Bathrooms','M² Constr.':'Built m²','M² Terreno':'Lot m²','Garaje':'Garage','Alberca':'Pool','Amueblado':'Furnished','Antigüedad':'Age','Construcción':'Construction','Descripción':'Description','Cerrar':'Close','Certificado':'Certificate','Amenidades':'Amenities','Tipo':'Type','Localidad':'Location','Precio':'Price','Precio por m²':'Price per m²',
+'Favoritos':'Favorites','Comparar':'Compare','Mis favoritos':'My favorites','Ver':'View','Aún no has guardado favoritos':'You have not saved any favorites yet','Enviar mis favoritos por WhatsApp':'Send my favorites via WhatsApp','Comparador':'Comparison','Limpiar comparador':'Clear comparison','Máximo 3 propiedades para comparar':'You can compare up to 3 properties','Elige al menos 2 propiedades':'Pick at least 2 properties','Guardar':'Save','Ver en el mapa':'View on map',
+'Calculadora de mensualidades':'Monthly payment calculator','Enganche':'Down payment','Plazo (meses)':'Term (months)','Tasa anual % (0 = sin intereses)':'Annual rate % (0 = interest-free)','A financiar':'Amount financed','Mensualidad':'Monthly payment','Total a pagar':'Total to pay','Cotizar por WhatsApp':'Request quote on WhatsApp','* Cálculo estimado, no constituye una oferta.':'* Estimate only, not an offer.','Toca una zona para acercarte y ver cada propiedad marcada sobre el terreno':'Tap an area to zoom in and see each property outlined on the land','Casa / Depto':'House / Apt','Lote / Terreno':'Lot / Land','Rancho / Finca':'Ranch / Estate','Toca las esquinas del terreno o la construcción':'Tap the corners of the land or building','Ver propiedad':'View property'};
+let lang='es';try{lang=localStorage.getItem('saastun_lang')||((navigator.language||'').toLowerCase().startsWith('en')?'en':'es');}catch(e){}
+const t=k=>(lang==='en'&&I18N[k])||k, tl=t;
+const _trC=(()=>{try{return JSON.parse(localStorage.getItem('saastun_tr')||'{}');}catch(e){return {};}})();
+const _trP={};
+function trKey(t){let h=0;for(let i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))|0;return t.length+'_'+h;}
+async function trEn(text){
+  const parts=(text.match(/[^.!?\n]+[.!?]*\s*/g)||[text]);const chunks=[];let cur='';
+  parts.forEach(s=>{if((cur+s).length>420){if(cur)chunks.push(cur);cur=s;}else cur+=s;});if(cur)chunks.push(cur);
+  const out=[];
+  for(const c of chunks){
+    const r=await fetch('https://api.mymemory.translated.net/get?q='+encodeURIComponent(c)+'&langpair=es|en');
+    const j=await r.json();const tx=j&&j.responseData&&j.responseData.translatedText;
+    if(!tx||/MYMEMORY WARNING|INVALID/i.test(tx))throw new Error('tr');
+    out.push(tx);
+  }
+  return out.join(' ');
+}
+const pd=p=>{
+  if(lang!=='en')return p.desc||'';
+  if(p.desc_en)return p.desc_en;
+  const d=p.desc||'';if(!d)return '';
+  const k=trKey(d);if(_trC[k])return _trC[k];
+  if(!_trP[k]){_trP[k]=1;trEn(d).then(r=>{_trC[k]=r;try{localStorage.setItem('saastun_tr',JSON.stringify(_trC));}catch(e){}
+    render();if(typeof dProp!=='undefined'&&dProp&&document.getElementById('dOverlay').classList.contains('open'))openDetail(dProp.id);}).catch(()=>{_trP[k]=0;});}
+  return d;
+};
+const num=v=>parseFloat(String(v==null?'':v).replace(/[^0-9.]/g,''))||0;
+const _orig=new WeakMap();
+function applyLang(){
+  document.documentElement.lang=lang;
+  document.querySelectorAll('option').forEach(o=>{if(!o.hasAttribute('value'))o.setAttribute('value',o.textContent.trim());});
+  const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let n;
+  while(n=w.nextNode()){
+    if(/^(SCRIPT|STYLE|TEXTAREA)$/.test(n.parentNode.nodeName))continue;
+    if(!_orig.has(n))_orig.set(n,n.nodeValue);
+    const o=_orig.get(n),k=o.trim().replace(/\s+/g,' ');if(!k)continue;
+    const tr=lang==='en'?I18N[k]:null;n.nodeValue=tr?o.replace(o.trim(),()=>tr):o;
+  }
+  document.querySelectorAll('#contacto [placeholder]').forEach(e=>{e.dataset.ph=e.dataset.ph||e.placeholder;e.placeholder=lang==='en'?(I18N[e.dataset.ph]||e.dataset.ph):e.dataset.ph;});
+  document.getElementById('langFloat').textContent=lang==='en'?'ES':'EN';
+}
+function toggleLang(){lang=lang==='en'?'es':'en';try{localStorage.setItem('saastun_lang',lang);}catch(e){}render();if(_currentView==='map')renderMap();updateBars();applyLang();}
+function render(){
+  render0();renderZoneBar();if(typeof pMap!=='undefined'&&pMap)drawMapLayer();
+  if(lang==='en'){const n=props.length;document.getElementById('catSub').textContent=n?n+(n!==1?' properties available':' property available'):'No properties yet';document.getElementById('navCount').textContent=n+(n!==1?' properties':' property');}
+  updateBars();applyLang();
+}
+
+// ── Favoritos y comparador ──
+let favs=[];try{favs=JSON.parse(localStorage.getItem('saastun_favs')||'[]');}catch(e){}
+let cmp=[];
+const isFav=id=>favs.includes(id), inCmp=id=>cmp.includes(id);
+function toggleFav(e,id){
+  if(e)e.stopPropagation();
+  favs=isFav(id)?favs.filter(x=>x!==id):[...favs,id];
+  try{localStorage.setItem('saastun_favs',JSON.stringify(favs));}catch(x){}
+  document.querySelectorAll('.fav-btn[data-id="'+id+'"]').forEach(b=>b.classList.toggle('on',isFav(id)));
+  updateBars();
+}
+function toggleCmp(e,id){
+  if(e)e.stopPropagation();
+  if(inCmp(id))cmp=cmp.filter(x=>x!==id);
+  else{if(cmp.length>=3){showInlineToast(t('Máximo 3 propiedades para comparar'),'error');return;}cmp.push(id);}
+  document.querySelectorAll('.cmp-btn[data-id="'+id+'"]').forEach(b=>b.classList.toggle('on',inCmp(id)));
+  updateBars();
+}
+function updateBars(){
+  const f=document.getElementById('fabs');if(!f)return;
+  let h='';
+  if(favs.length)h+=`<button onclick="openFavs()">♥ ${t('Favoritos')} (${favs.length})</button>`;
+  if(cmp.length)h+=`<button onclick="openCmp()">⚖ ${t('Comparar')} (${cmp.length})</button>`;
+  f.innerHTML=h;f.style.display=h?'flex':'none';
+}
+function gOpen(h){document.getElementById('gC').innerHTML=h;document.getElementById('gOv').classList.add('open');applyLang();}
+function closeG(){document.getElementById('gOv').classList.remove('open');}
+function openFavs(){
+  const L=favs.map(id=>props.find(p=>p.id===id)).filter(Boolean);
+  const msg=encodeURIComponent((lang==='en'?'Hi! I am interested in these properties:\n':'¡Hola! Me interesan estas propiedades:\n')+L.map(p=>'• '+p.nombre+' — '+(p.precio||'')).join('\n'));
+  gOpen(`<div class="gpad"><h3 class="gt">♥ ${t('Mis favoritos')}</h3>${L.length?L.map(p=>`<div class="grow"><img src="${(p.imgs||[])[0]||''}" onerror="this.style.visibility='hidden'"><div><b>${p.nombre||''}</b><span>${p.precio||''}</span></div><button onclick="closeG();openDetail('${p.id}')">${t('Ver')}</button><button onclick="toggleFav(null,'${p.id}');openFavs()">✕</button></div>`).join(''):`<p>${t('Aún no has guardado favoritos')}</p>`}${L.length?`<a class="gwa" target="_blank" href="https://wa.me/529992318875?text=${msg}">${t('Enviar mis favoritos por WhatsApp')}</a>`:''}</div>`);
+}
+function openCmp(){
+  const L=cmp.map(id=>props.find(p=>p.id===id)).filter(Boolean);
+  if(L.length<2){showInlineToast(t('Elige al menos 2 propiedades'),'error');return;}
+  const ppm=p=>{const a=num(p.precio),m=num(p.m2_terreno)||num(p.m2_construccion);return a&&m?money(a/m,/usd|dls/i.test(p.precio||'')?'USD':'MXN'):'—';};
+  const R=[['Precio',p=>p.precio||'—'],['Precio por m²',ppm],['Tipo',p=>tl(p.tipo||'—')],['Localidad',p=>locOf(p)||'—'],['Habitaciones',p=>p.hab||'—'],['Baños',p=>p.banos||'—'],['M² Constr.',p=>p.m2_construccion||'—'],['M² Terreno',p=>p.m2_terreno||'—'],['Certificado',p=>p.cert||'—'],['Alberca',p=>p.alberca||'—'],['Garaje',p=>p.garaje||'—'],['Amenidades',p=>p.amenidades||'—']];
+  gOpen(`<div class="gpad"><h3 class="gt">⚖ ${t('Comparador')}</h3><div style="overflow-x:auto"><table class="gtbl"><tr><th></th>${L.map(p=>`<th><img src="${(p.imgs||[])[0]||''}" onerror="this.style.display='none'"><br>${p.nombre||''}</th>`).join('')}</tr>${R.map(r=>`<tr><td><b>${t(r[0])}</b></td>${L.map(p=>`<td>${r[1](p)}</td>`).join('')}</tr>`).join('')}</table></div><a class="gwa" style="cursor:pointer;background:var(--ink)" onclick="cmp=[];closeG();render()">${t('Limpiar comparador')}</a></div>`);
+}
+
+// ── Financiamiento (solo lotes y casos especiales) ──
+function money(n,c){try{return new Intl.NumberFormat(lang==='en'?'en-US':'es-MX',{style:'currency',currency:c||'MXN',maximumFractionDigits:0}).format(n);}catch(e){return '$'+Math.round(n);}}
+Object.assign(I18N,{'Ubicaciones':'Locations','Explora el':'Explore the','mapa':'map','Toca una zona para ver sus propiedades':'Tap an area to see its properties','Acércate para ver cada propiedad marcada sobre el terreno':'Zoom in to see each property outlined on the land','Todas':'All','Otras ubicaciones':'Other locations','enganche desde':'down payment from','Solo de contado':'Cash only','Pago de contado':'Cash payment','Esta propiedad se vende de contado.':'This property is sold for cash.','Enganche mínimo':'Minimum down payment','Tasa anual':'Annual rate','Sin intereses':'Interest-free','sin enganche':'no down payment','Precio':'Price','Esta propiedad aún no está marcada en el mapa':'This property is not on the map yet','Escribir por WhatsApp':'Message us on WhatsApp'});
+const LOTE_T=['Lote','Lote Industrial','Terreno','Terreno Playa','Hectáreas'];
+const PLAZOS=[6,12,18,24,36,48,60,72,84,96,120,180,240];
+const curOf=p=>/usd|dls|dólar/i.test(p.precio||'')?'USD':'MXN';
+const finOK=p=>p.estado!=='Renta'&&(LOTE_T.includes(p.tipo)||!!p.fin_especial);
+const finOn=p=>finOK(p)&&p.pago==='financiamiento';
+function engMinPct(p){
+  const v=parseFloat(p.eng_min),P=num(p.precio);
+  if(isNaN(v))return 20;
+  if(p.eng_unit==='MXN')return P?Math.min(90,Math.max(0,Math.ceil(v/P*100))):20;
+  return Math.min(90,Math.max(0,v));
+}
+function engLabel(p){
+  const v=parseFloat(p.eng_min);
+  if(isNaN(v))return '20%';
+  if(v===0)return t('sin enganche');
+  return p.eng_unit==='MXN'?money(v,curOf(p)):v+'%';
+}
+function finTag(p){
+  if(!finOK(p))return '';
+  return finOn(p)?`<div class="fin-tag">💳 ${t('Financiamiento')} · ${t('enganche desde')} ${engLabel(p)}</div>`:`<div class="fin-tag cash">💵 ${t('Solo de contado')}</div>`;
+}
+function finHTML(p){
+  if(!finOK(p))return '';
+  const wa='https://wa.me/529992318875?text='+encodeURIComponent((lang==='en'?'Hi! I am interested in: ':'¡Hola! Me interesa: ')+p.nombre+' — '+(p.precio||''));
+  const nota=p.fin_nota?`<small>${p.fin_nota}</small>`:'';
+  if(!finOn(p))return `<div class="calc cash"><h4>💵 ${t('Pago de contado')}</h4><p>${t('Esta propiedad se vende de contado.')}</p>${nota}<a class="gwa" target="_blank" href="${wa}">${t('Escribir por WhatsApp')}</a></div>`;
+  const P=num(p.precio);if(!P)return '';
+  const cur=curOf(p),minE=Math.min(90,Math.ceil(engMinPct(p))),maxN=parseInt(p.plazo_max)||60;
+  let pl=PLAZOS.filter(n=>n<=maxN);if(!pl.length)pl=[maxN];
+  const sel=pl.filter(n=>n<=36).pop()||pl[0];
+  const tasa=parseFloat(p.tasa)||0;
+  return `<div class="calc" id="cd_box" data-id="${p.id}" oninput="calcRun()" onchange="calcRun()"><h4>${t('Calculadora de mensualidades')}</h4>
+<div class="cpr"><span>${t('Precio')}</span><b>${money(P,cur)}</b></div>
+<label>${t('Enganche')}: <b id="cd_ev">${minE}%</b></label><input type="range" id="cd_e" min="${minE}" max="${Math.max(90,minE)}" step="1" value="${minE}">
+<div class="chint">${t('Enganche mínimo')}: ${engLabel(p)}</div>
+<label>${t('Plazo (meses)')}</label><select id="cd_n">${pl.map(n=>`<option value="${n}" ${n===sel?'selected':''}>${n}</option>`).join('')}</select>
+<div class="chint">${t('Tasa anual')}: ${tasa?tasa+'%':t('Sin intereses')}</div>
+<div class="cout" id="cd_o"></div><a class="gwa" target="_blank" id="cd_w">${t('Cotizar por WhatsApp')}</a>${nota}<small>${t('* Cálculo estimado, no constituye una oferta.')}</small></div>`;
+}
+function calcRun(){
+  const box=document.getElementById('cd_box');if(!box)return;
+  const p=props.find(x=>x.id===box.dataset.id);if(!p)return;
+  const cur=curOf(p),P=num(p.precio),e=+document.getElementById('cd_e').value,n=+document.getElementById('cd_n').value,r=(parseFloat(p.tasa)||0)/1200;
+  document.getElementById('cd_ev').textContent=e+'%';
+  const d=P*e/100,Lm=P-d,m=r?Lm*r/(1-Math.pow(1+r,-n)):Lm/n,tot=d+m*n;
+  document.getElementById('cd_o').innerHTML=`<div>${t('Enganche')}<b>${money(d,cur)}</b></div><div>${t('A financiar')}<b>${money(Lm,cur)}</b></div><div class="big">${t('Mensualidad')}<b>${money(m,cur)}</b></div><div class="big" style="background:#fff"><span>${t('Total a pagar')}</span><b style="color:var(--ink);font-size:16px">${money(tot,cur)}</b></div>`;
+  const txt=(lang==='en'?'Hi! I would like a quote':'¡Hola! Quiero una cotización')+' · '+p.nombre+`\n${t('Precio')}: ${money(P,cur)}\n${t('Enganche')}: ${e}% (${money(d,cur)})\n${t('Plazo (meses)')}: ${n}\n${t('Mensualidad')}: ${money(m,cur)}`;
+  document.getElementById('cd_w').href='https://wa.me/529992318875?text='+encodeURIComponent(txt);
+}
+function detailExtras(p){
+  const share=encodeURIComponent((lang==='en'?'Hi! I am interested in: ':'¡Hola! Me interesa: ')+p.nombre+' — '+(p.precio||''));
+  return `<div class="dx"><button class="${isFav(p.id)?'on':''}" onclick="toggleFav(null,'${p.id}');this.classList.toggle('on')">♥ ${t('Guardar')}</button><button onclick="closeD();focusProp('${p.id}')">📍 ${t('Ver en el mapa')}</button><a target="_blank" href="https://wa.me/529992318875?text=${share}">💬 WhatsApp</a></div>${finHTML(p)}`;
+}
+
+
+// ── Mapa: zonas, terrenos y construcciones marcadas ──
+const ZONES={'Telchac Puerto':[21.3414,-89.2653],'Chelem':[21.2686,-89.7467],'Mérida':[20.9674,-89.5926],'Tixcocob':[21.0167,-89.3833],'Tizimín':[21.1430,-88.1500]};
+const COL={casa:'#B8860B',lote:'#2e9e5b',rancho:'#c2410c',hac:'#7c2d6b',cen:'#0891b2'};
+const grp=tp=>['Casa','Departamento','Casa de Playa'].includes(tp)?'casa':['Rancho','Finca'].includes(tp)?'rancho':tp==='Hacienda'?'hac':tp==='Cenote'?'cen':'lote';
+const locOf=p=>p.localidad&&p.localidad!=='Otra'?p.localidad:(Object.keys(ZONES).find(z=>(p.ubicacion||'').toLowerCase().includes(z.toLowerCase()))||'');
+function urlCoords(u){u=u||'';const m=u.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/)||u.match(/[?&](?:q|ll)=(-?\d+\.\d+),(-?\d+\.\d+)/)||u.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);return m?[+m[1],+m[2]]:null;}
+const cen=pts=>[pts.reduce((a,q)=>a+q[0],0)/pts.length,pts.reduce((a,q)=>a+q[1],0)/pts.length];
+function polyOf(p){
+  if(p.poly&&p.poly.length>=3)return p.poly.map(q=>[q.lat,q.lng]);
+  const c=(p.lat!=null&&p.lng!=null)?[p.lat,p.lng]:urlCoords(p.map_url);if(!c)return null;
+  let m2=num(p.m2_terreno)||num(p.area)||400;if(p.tipo==='Hectáreas'&&m2<1000)m2*=10000;
+  m2=Math.min(Math.max(m2,200),250000);
+  const s=Math.sqrt(m2)/2,a=s/111320,b=s/(111320*Math.cos(c[0]*Math.PI/180));
+  return [[c[0]-a,c[1]-b],[c[0]-a,c[1]+b],[c[0]+a,c[1]+b],[c[0]+a,c[1]-b]];
+}
+function sat(m){
+  const s=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:18,maxZoom:20,attribution:'Esri'}).addTo(m);
+  const lb=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxNativeZoom:18,maxZoom:20}).addTo(m);
+  const o=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
+  L.control.layers({'Satélite':s,'Mapa':o},{'Nombres':lb},{collapsed:true}).addTo(m);
+}
+let pMap,mapLayer,byId={};
+function hav(a,b){const R=6371,r=x=>x*Math.PI/180,dl=r(b[0]-a[0]),dn=r(b[1]-a[1]);const h=Math.sin(dl/2)**2+Math.cos(r(a[0]))*Math.cos(r(b[0]))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(h));}
+function pCenter(p){const pts=polyOf(p);return pts?cen(pts):null;}
+function zoneOf(p){
+  const z=locOf(p);if(z)return z;
+  const c=pCenter(p);if(!c)return '';
+  let best='',bd=45;
+  Object.entries(ZONES).forEach(([n,zc])=>{const d=hav(c,zc);if(d<bd){bd=d;best=n;}});
+  return best;
+}
+function initMap(){
+  if(pMap||!window.L||!document.getElementById('pMap'))return;
+  pMap=L.map('pMap',{scrollWheelZoom:false}).setView([20.95,-89.2],8);sat(pMap);
+  mapLayer=L.layerGroup().addTo(pMap);pMap.on('zoomend',drawMapLayer);
+  pMap.on('click',()=>pMap.scrollWheelZoom.enable());
+  fitAll();drawMapLayer();
+  setTimeout(()=>{pMap.invalidateSize();},400);
+}
+function fitAll(){
+  if(!pMap)return;
+  const pts=[];
+  catProps().forEach(p=>{const z=zoneOf(p),c=pCenter(p);if(c)pts.push(c);else if(z)pts.push(ZONES[z]);});
+  if(pts.length)pMap.fitBounds(L.latLngBounds(pts),{padding:[50,50],maxZoom:11});
+}
+function renderMap(){initMap();if(pMap){pMap.invalidateSize();drawMapLayer();}}
+function drawMapLayer(){
+  if(!pMap)return;
+  mapLayer.clearLayers();byId={};
+  const z=pMap.getZoom(),fp=catProps();
+  if(z<13){
+    const counts={};
+    fp.forEach(p=>{const n=zoneOf(p);if(n)counts[n]=(counts[n]||0)+1;});
+    Object.entries(counts).forEach(([name,n])=>{
+      const c=ZONES[name];
+      L.marker(c,{icon:L.divIcon({className:'',html:`<div class="zb">${name}<b>${n}</b></div>`,iconSize:[0,0]})}).on('click',()=>setZone(name,true)).addTo(mapLayer);
+    });
+    fp.forEach(p=>{
+      if(zoneOf(p))return;const c=pCenter(p);if(!c)return;
+      const col=COL[grp(p.tipo)];
+      L.circleMarker(c,{radius:9,color:'#fff',weight:2,fillColor:col,fillOpacity:.95}).bindTooltip((p.nombre||'')+' · '+(p.precio||''),{className:'ptip'}).on('click',()=>{pMap.flyTo(c,16);}).addTo(mapLayer);
+    });
+  }else fp.forEach(p=>{
+    const pts=polyOf(p);if(!pts)return;
+    const col=COL[grp(p.tipo)];
+    const pg=L.polygon(pts,{color:col,weight:3,fillColor:col,fillOpacity:.38}).addTo(mapLayer);
+    pg.bindTooltip((ICONS[p.tipo]||'🏠')+' '+(p.precio||''),{permanent:z>=16,direction:'center',className:'ptip'});
+    pg.on('click',()=>mapPop(p,pg));byId[p.id]=pg;
+    if(z<17)L.circleMarker(cen(pts),{radius:11,color:'#fff',weight:2,fillColor:col,fillOpacity:.9,interactive:false}).addTo(mapLayer);
+  });
+  const chips=fp.filter(p=>polyOf(p));
+  document.getElementById('zChips').innerHTML=chips.map(p=>`<button class="zchip" onclick="focusProp('${p.id}')">${ICONS[p.tipo]||'🏠'} ${p.nombre||''}${p.precio?' · '+p.precio:''}</button>`).join('');
+}
+function mapPop(p,l){
+  const im=(p.imgs||[])[0];
+  l.bindPopup(`<div style="font-family:Outfit,sans-serif;min-width:190px">${im?`<img src="${im}" style="width:100%;height:100px;object-fit:cover;margin-bottom:6px">`:''}<b>${p.nombre||''}</b><div style="color:#B8860B;font-weight:600;margin:3px 0">${p.precio||''}</div><div style="font-size:11px;color:#777;margin-bottom:8px">${tl(p.tipo||'')} · ${locOf(p)||p.ubicacion||''}</div><button onclick="openDetail('${p.id}')" style="padding:7px 12px;background:#B8860B;color:#fff;border:0;cursor:pointer">${t('Ver propiedad')}</button> <button onclick="toggleFav(null,'${p.id}')" style="padding:7px 10px;border:1px solid #ccc;background:#fff;cursor:pointer">♥</button></div>`).openPopup();
+}
+function focusProp(id){
+  const p=props.find(x=>x.id===id);if(!p)return;
+  const pts=polyOf(p);
+  document.getElementById('mapa').scrollIntoView({behavior:'smooth'});
+  if(!pts){showInlineToast(t('Esta propiedad aún no está marcada en el mapa'),'error');return;}
+  setTimeout(()=>{pMap.invalidateSize();pMap.flyTo(cen(pts),17,{duration:1});pMap.once('moveend',()=>{drawMapLayer();const l=byId[id];if(l)mapPop(p,l);});},450);
+}
+function setZone(z,fromMap){
+  _zone=z;
+  if(pMap){
+    if(z&&ZONES[z])pMap.flyTo(ZONES[z],15,{duration:1.1});
+    else if(!z)fitAll();
+  }
+  render();
+  if(z&&fromMap)setTimeout(()=>{const el=document.getElementById('zoneBar');if(el)window.scrollTo({top:el.getBoundingClientRect().top+window.scrollY-90,behavior:'smooth'});},700);
+}
+function renderZoneBar(){
+  const el=document.getElementById('zoneBar');if(!el)return;
+  const base=catProps(),counts={};
+  base.forEach(p=>{const z=zoneOf(p)||'__otras';counts[z]=(counts[z]||0)+1;});
+  let h=`<button class="zbtn ${!_zone?'on':''}" onclick="setZone('')">${t('Todas')} (${base.length})</button>`;
+  Object.keys(counts).filter(z=>z!=='__otras').forEach(z=>{h+=`<button class="zbtn ${_zone===z?'on':''}" onclick="setZone('${z}')">📍 ${z} (${counts[z]})</button>`;});
+  if(counts.__otras)h+=`<button class="zbtn ${_zone==='__otras'?'on':''}" onclick="setZone('__otras')">${t('Otras ubicaciones')} (${counts.__otras})</button>`;
+  el.innerHTML=h;
+}
+
+// ══════════════ CHATBOT (discovery divertido v3) ══════════════
+const CBG={lotes:LOTE_T,casas:['Casa','Departamento','Casa de Playa'],ranchos:['Rancho','Finca'],otros:['Cenote','Hacienda']};
+CBG.any=[].concat(CBG.lotes,CBG.casas,CBG.ranchos,CBG.otros);
+const cbS={nombre:'',wait:'',origen:'',conoce:'',meta:'',tipo:'',zona:'',pres:'',pago:'',cuando:'',lab:{},found:[]};
+const cbT=(es,en)=>lang==='en'?en:es;
+const cbL=a=>cbT(a[0],a[1]);
+const cbR=a=>a[Math.floor(Math.random()*a.length)];
+const cbJ=a=>cbL(cbR(a));
+const cbEsc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const cbN=()=>cbS.nombre?cbEsc(cbS.nombre):'';
+const CBO={mid:['🏙️ Soy de Mérida','🏙️ I am from Mérida'],yuc:['🌴 Otro lugar de Yucatán','🌴 Elsewhere in Yucatán'],mx:['🇲🇽 Otro estado de México','🇲🇽 Another Mexican state'],ext:['✈️ Otro país','✈️ Another country']};
+const CBC={si:['😎 Como mi mano','😎 Like the back of my hand'],poco:['🙂 Un poquito','🙂 A little'],no:['🆕 Aún no / primera vez','🆕 Not yet / first time']};
+const CBM={inv:['💰 Invertir','💰 Invest'],viv:['🏡 Vivir','🏡 Live there'],esc:['🏖️ Escapada / descanso','🏖️ Getaway / rest'],neg:['🏗️ Negocio o desarrollo','🏗️ Business / development']};
+const CBTP={lotes:['🌿 Lotes y terrenos','🌿 Lots & land'],casas:['🏠 Casas','🏠 Houses'],ranchos:['🐄 Ranchos y fincas','🐄 Ranches & estates'],otros:['💧 Cenotes / Haciendas','💧 Cenotes / Haciendas'],any:['🎲 Sorpréndeme','🎲 Surprise me']};
+const CBJ={
+ hola:[['¡Quihubo! Soy el asistente de <b>Sáastun</b> 🏡 Prometo no cobrar comisión (eso es cosa de los asesores 😄).','Hey there! I am the <b>Sáastun</b> assistant 🏡 I promise not to charge commission (that is the advisors\' job 😄).'],['¡Bienvenido! Soy el asistente de <b>Sáastun</b> 🌴 Mi especialidad: encontrar tierra bonita sin que te mareen con tecnicismos.','Welcome! I am the <b>Sáastun</b> assistant 🌴 My specialty: finding great land without dizzying you with jargon.'],['¡Hola, hola! Soy el asistente de <b>Sáastun</b> ☀️ Trabajo 24/7 y no pido vacaciones (aunque con tanta playa, tentación no me falta 😅).','Hello, hello! I am the <b>Sáastun</b> assistant ☀️ I work 24/7 and never take vacation (though with so many beaches, I am tempted 😅).']],
+ nombre:[['Para empezar con el pie derecho: <b>¿cómo te llamas?</b>','Let us start on the right foot: <b>what is your name?</b>'],['Primero lo primero: <b>¿con quién tengo el gusto?</b>','First things first: <b>who do I have the pleasure of talking to?</b>']],
+ mucho:[['¡Mucho gusto, <b>{n}</b>! Ya somos amigos 🤝','Nice to meet you, <b>{n}</b>! We are friends now 🤝'],['¡Qué buen nombre, <b>{n}</b>! 😄','Great name, <b>{n}</b>! 😄'],['¡Encantado, <b>{n}</b>! Me caíste bien desde el primer mensaje 😎','Pleased to meet you, <b>{n}</b>! I liked you from the first message 😎']],
+ origenQ:[['¿Desde dónde nos escribes?','Where are you writing from?'],['Cuéntame, ¿de dónde eres?','Tell me, where are you from?']],
+ origen:{
+  mid:[['¡Meridano! Entonces ya sabes lo que es sudar en pleno invierno y aun así amar tu ciudad 😂','A Mérida local! So you know what it is to sweat in winter and still love your city 😂'],['¡De Mérida! Así que ya tienes doctorado en cochinita y en tráfico de Periférico 😄','From Mérida! So you hold a PhD in cochinita and Periférico traffic 😄']],
+  yuc:[['¡Yucateco de corazón! Entonces sí sabes que "ahorita" puede ser en cinco minutos o en tres días 😅','Yucatecan at heart! Then you know "ahorita" can mean five minutes or three days 😅'],['¡Orgullo yucateco! Seguro tu abuela hace mejor sopa de lima que cualquier restaurante 🍋','Yucatecan pride! Your grandma surely makes better lime soup than any restaurant 🍋']],
+  mx:[['¡Bienvenido a la península desde lejos! Aquí el calor se abraza con aire acondicionado y agua de horchata 🥵❄️','Welcome to the peninsula from afar! Here the heat is hugged with A/C and horchata 🥵❄️'],['¡Qué gusto que vengas de otro estado! Advertencia amistosa: aquí el sol sí se toma en serio su chamba ☀️','Glad you came from another state! Friendly warning: here the sun takes its job seriously ☀️']],
+  ext:[['¡Wow, desde otro país! 🌎 Prometo que el pasaporte no es necesario para disfrutar la cochinita (pero ayuda a venir) 😄','Wow, from another country! 🌎 Passport not needed to enjoy cochinita (but it helps to get here) 😄'],['¡Bienvenido desde lejos! ✈️ Aquí los atardeceres vienen incluidos y el jet lag se cura con un coco 🥥','Welcome from afar! ✈️ Sunsets included and jet lag is cured with a coconut 🥥']],
+  otro:[['¡{o}! Suena a lugar con buena historia 😄','{o}! Sounds like a place with a good story 😄'],['¡{o}! Ya quiero saber qué extrañas de allá... aparte del clima, claro 😂','{o}! I wonder what you miss from there... besides the weather 😂']]},
+ conoceQ:[['¿Y ya conoces Yucatán y Mérida?','And do you already know Yucatán and Mérida?'],['¿Qué tanto conoces Yucatán y Mérida?','How well do you know Yucatán and Mérida?']],
+ conoce:{
+  si:[['¡Entonces eres local honorario! 🏅 Nada de explicarte qué es un "volán".','Then you are an honorary local! 🏅 No need to explain what a "volán" is.'],['¡Eso! Ya sabes dónde se come el mejor panucho 🌮 Eso ahorra media plática.','Nice! You know where to find the best panucho 🌮 That saves half the chat.']],
+  poco:[['Perfecto, nivel intermedio 🙂 Te voy a subir de nivel con unas buenas opciones.','Perfect, intermediate level 🙂 I will level you up with some great options.'],['Un poquito es un gran comienzo... ¡lo demás se aprende comiendo! 🍽️','A little is a great start... the rest you learn by eating! 🍽️']],
+  no:[['¡Primera vez! 🎉 Te advierto: es de esos lugares a los que se viene "una semana" y uno se queda años.','First time! 🎉 Fair warning: it is one of those places you visit for "a week" and stay for years.'],['¡Uy, qué envidia! Vas a descubrir cenotes, haciendas y playas de las que no se olvidan 💙','Oh, I am jealous! You will discover cenotes, haciendas and unforgettable beaches 💙']]},
+ metaQ:[['¿Y qué te trae por aquí? ¿Qué buscas lograr?','So what brings you here? What are you hoping to achieve?'],['Dime, ¿cuál es el plan?','Tell me, what is the plan?']],
+ meta:{
+  inv:[['¡Ese es el espíritu! 📈 La tierra no manda notificaciones, no se cae con el wifi y no te pide actualizar la app 😎','That is the spirit! 📈 Land sends no notifications, does not crash with the wifi and never asks you to update 😎'],['Invertir en tierra: el único "portafolio" donde puedes ir a ver tu inversión y tomarte una foto 📸','Investing in land: the only "portfolio" you can visit and take a picture of 📸']],
+  viv:[['¡Bienvenido a casa! 🏡 Aquí el estrés se queda en el periférico 😌','Welcome home! 🏡 Here stress stays on the highway 😌'],['Vivir aquí es cambiar el reloj por la hamaca. Mala idea para tu productividad, excelente para tu vida 😄','Living here means swapping the clock for a hammock. Bad for productivity, great for life 😄']],
+  esc:[['Hamaca, brisa y cero juntas de Zoom 🏖️ Excelente decisión.','Hammock, breeze and zero Zoom meetings 🏖️ Great call.'],['Una escapadita... de esas que dicen "solo el fin de semana" y terminan siendo puente largo 😎','A little getaway... the kind that says "just the weekend" and becomes a long one 😎']],
+  neg:[['Huele a proyecto grande 🏗️ Dime y lo aterrizamos (con todo y permisos, claro).','Smells like a big project 🏗️ Tell me and we will make it happen.'],['¡Emprendedor/a! 💼 Aquí el café lo pone el sol de Yucatán, tú pones la idea.','An entrepreneur! 💼 Yucatán\'s sun brings the coffee, you bring the idea.']]},
+ tipoQ:[['¿Qué tipo de propiedad traes en mente?','What type of property do you have in mind?'],['¿Qué te late más?','What appeals to you most?']],
+ tipo:{
+  lotes:[['Un lote es un lienzo en blanco: tú pones la casa, la alberca... y la parrilla 🔥','A lot is a blank canvas: you add the house, the pool... and the grill 🔥'],['Lote: la única compra donde "sin muebles" es una ventaja 😂','A lot: the only purchase where "unfurnished" is a perk 😂']],
+  casas:[['Casa lista: llegas, dejas la maleta y ya. Cero albañiles a las 7 am 🙌','Move-in ready: drop the suitcase and done. Zero builders at 7 am 🙌'],['Casa: de las que ya traen techo, que en este clima es un detalle importante ☀️','A house: the kind that already has a roof, an important detail in this climate ☀️']],
+  ranchos:[['¡Ah, vida de rancho! Botas, caballos y café de olla 🤠','Ah, ranch life! Boots, horses and campfire coffee 🤠'],['Rancho: donde el "tráfico" son tres vacas cruzando el camino 🐄','A ranch: where "traffic" is three cows crossing the road 🐄']],
+  otros:[['Tener tu propio cenote o hacienda es otro nivel: albercota natural incluida 💧🏛️','Owning a cenote or hacienda is next level: natural pool included 💧🏛️'],['Cenotes y haciendas: porque una alberca normal ya es muy... normal 😎','Cenotes and haciendas: because a regular pool is just too... regular 😎']],
+  any:[['Un aventurero 🎲 Te enseño de todo un poco, sin compromiso.','An adventurer 🎲 I will show you a bit of everything, no strings.']]},
+ invlote:[['Lote + inversión: la combinación favorita de quien duerme tranquilo 😴 (ojo: rendimientos no te los prometo yo, eso lo platica un asesor con números).','Lot + investment: the favorite combo of people who sleep well 😴 (I cannot promise returns; an advisor will walk you through the numbers).']],
+ zonaQ:[['¿En qué zona te late?','Which area do you like?'],['¿Por dónde te gustaría?','Where would you like it?']],
+ zona:{
+  'Chelem':[['Chelem: puerto tranquilo, pescado fresco y atardeceres gratis 🌅','Chelem: quiet port, fresh fish and free sunsets 🌅']],
+  'Mérida':[['Mérida: ciudad blanca, cochinita y el aire acondicionado como estilo de vida ❄️','Mérida: white city, cochinita and A/C as a lifestyle ❄️']],
+  'Tizimín':[['Tizimín: tierra de ganaderos, aquí se invierte con botas 🐄','Tizimín: cattle country, here you invest wearing boots 🐄']],
+  'Telchac Puerto':[['Telchac: playa bonita sin la multitud 🏖️','Telchac: pretty beach without the crowds 🏖️']],
+  'Tixcocob':[['Tixcocob: cerquita de Mérida, con paz de pueblo 😌','Tixcocob: close to Mérida with small-town peace 😌']],
+  '':[['Cualquier zona: mente abierta, me caes bien 😎','Any area: open mind, I like you 😎']]},
+ presQ:[['¿Y el presupuesto aproximado?','And the approximate budget?'],['Hablemos de dinero, que es lo divertido 💸 ¿Qué rango manejas?','Let us talk money, the fun part 💸 What range do you have?']],
+ pres:{
+  '0-1':[['Presupuesto inteligente: los mejores tesoros no siempre son los más caros 💎','Smart budget: the best treasures are not always the priciest 💎']],
+  '1-3':[['Buen rango, hay de dónde escoger 👌','Nice range, plenty to choose from 👌']],
+  '3-6':[['Ya hablamos de cosas bonitas ✨','Now we are talking nice things ✨']],
+  '6-999':[['Uy, calidad premium 🥂 Saco la alfombra roja.','Premium quality 🥂 Rolling out the red carpet.']],
+  '':[['Sin límite... ¡me caes bien! 😄 (tu asesor también te va a caer bien)','No limit... I like you! 😄']]},
+ pagoQ:[['¿Cómo piensas pagar?','How do you plan to pay?']],
+ pago:{
+  con:[['Contado: directo y sin vueltas 💪','Cash: direct and no detours 💪']],
+  fin:[['Financiamiento: porque no todos tenemos un tío en Las Vegas 🎰 (yo tampoco)','Financing: because not everyone has an uncle in Las Vegas 🎰 (me neither)'],['Financiamiento: la forma elegante de decir "mensualidades sin drama" 😌','Financing: the elegant way to say "monthly payments without drama" 😌']],
+  any:[['Flexible, me gusta 🤝 Vemos lo que más te convenga.','Flexible, I like it 🤝 We will see what suits you best.']]},
+ cuandoQ:[['Última, {n}: ¿para cuándo lo quieres?','Last one, {n}: when are you looking to move?']],
+ cuando:{
+  ya:[['¡Esa energía me encanta! 🔥 Vamos rápido pero bien.','Love that energy! 🔥 Fast but done right.']],
+  meses:[['Perfecto, hay tiempo para elegir bien ✅','Perfect, time to choose wisely ✅']],
+  ver:[['Ver es gratis y sin presión 😌 Para eso estoy.','Looking is free and pressure-free 😌 That is what I am for.']]}
+};
+function cbToggle(){
+  const b=document.getElementById('cbBox'),o=b.classList.toggle('open');
+  document.getElementById('cbFabTxt').style.display=o?'none':'';
+  if(o&&!b.dataset.init){b.dataset.init=1;cbStart();}
+}
+function cbMsg(html,me){const m=document.getElementById('cbMsgs'),d=document.createElement('div');d.className='cbm '+(me?'me':'bot');d.innerHTML=html;m.appendChild(d);m.scrollTop=m.scrollHeight;}
+function cbQR(o){document.getElementById('cbQR').innerHTML=o.map(([l,f])=>`<button onclick="${f}">${l}</button>`).join('');}
+const cbF=(a)=>cbJ(a).replace(/\{n\}/g,cbN()||cbT('amigo','friend'));
+function cbStart(){
+  Object.assign(cbS,{nombre:'',wait:'nombre',origen:'',conoce:'',meta:'',tipo:'',zona:'',pres:'',pago:'',cuando:'',lab:{},found:[]});
+  cbMsg(cbJ(CBJ.hola)+'<br><br>'+cbJ(CBJ.nombre));
+  cbQR([[cbT('🤐 Prefiero no decirte','🤐 I would rather not say'),"cbName('')"]]);
+}
+function cbName(n){
+  n=(n||'').trim().slice(0,40);cbS.nombre=n;cbS.wait='origen';
+  cbMsg(n?cbEsc(n):cbT('Prefiero no decirte 🤐','I would rather not say 🤐'),1);
+  cbMsg((n?cbF(CBJ.mucho):cbT('¡Misterioso/a! Me gusta 🕵️ Seguimos entonces.','Mysterious! I like it 🕵️ Let us go on.'))+'<br><br><b>'+cbJ(CBJ.origenQ)+'</b>');
+  cbQR(Object.keys(CBO).map(k=>[cbL(CBO[k]),`cbOrigen('${k}')`]));
+}
+function cbOrigen(k,txt){
+  cbS.wait='';
+  const lab=txt||CBO[k][0].replace(/^\S+\s/,'');cbS.origen=k;cbS.lab.origen=lab;cbMsg(txt?cbEsc(txt):cbL(CBO[k]),1);
+  const j=(CBJ.origen[k]||CBJ.origen.otro);
+  cbMsg(cbJ(j).replace(/\{o\}/g,cbEsc(txt||''))+'<br><br><b>'+cbJ(CBJ.conoceQ)+'</b>');
+  cbQR(Object.keys(CBC).map(c=>[cbL(CBC[c]),`cbConoce('${c}')`]));
+}
+function cbConoce(k){
+  cbS.conoce=k;cbS.lab.conoce=CBC[k][0].replace(/^\S+\s/,'');cbMsg(cbL(CBC[k]),1);
+  cbMsg(cbJ(CBJ.conoce[k])+'<br><br><b>'+cbJ(CBJ.metaQ)+'</b>');
+  cbQR([...Object.keys(CBM).map(k=>[cbL(CBM[k]),`cbMeta('${k}')`]),[cbT('💳 Ver financiamiento','💳 See financing'),'cbFin()']]);
+}
+function cbMeta(k){
+  cbS.meta=k;cbS.lab.meta=CBM[k][0];cbMsg(cbL(CBM[k]),1);
+  cbMsg(cbJ(CBJ.meta[k])+'<br><br><b>'+cbJ(CBJ.tipoQ)+'</b>');
+  cbQR(Object.keys(CBTP).map(t=>[cbL(CBTP[t]),`cbTipo('${t}')`]));
+}
+function cbTipo(k){
+  cbS.tipo=k;cbS.lab.tipo=CBTP[k][0];cbMsg(cbL(CBTP[k]),1);
+  let j=cbJ(CBJ.tipo[k]);
+  if(cbS.meta==='inv'&&k==='lotes')j+='<br><br>'+cbJ(CBJ.invlote);
+  cbMsg(j+'<br><br><b>'+cbJ(CBJ.zonaQ)+'</b>');
+  const zs=[...new Set(props.filter(p=>p.estado!=='Renta'&&CBG[k].includes(p.tipo)).map(p=>zoneOf(p)).filter(Boolean))];
+  cbQR([...zs.map(z=>['📍 '+z,`cbZona('${z}')`]),[cbT('Cualquiera','Anywhere'),"cbZona('')"]]);
+}
+function cbZona(z){
+  cbS.zona=z;cbS.lab.zona=z||'Cualquier zona';cbMsg(z||cbT('Cualquier zona','Anywhere'),1);
+  cbMsg(cbJ(CBJ.zona[z]||CBJ.zona[''])+'<br><br><b>'+cbJ(CBJ.presQ)+'</b>');
+  cbQR([[cbT('Hasta $1M','Up to $1M'),"cbPres('0-1')"],['$1M – $3M',"cbPres('1-3')"],['$3M – $6M',"cbPres('3-6')"],[cbT('Más de $6M','Over $6M'),"cbPres('6-999')"],[cbT('Sin límite','No limit'),"cbPres('')"]]);
+}
+function cbPres(v){
+  cbS.pres=v;
+  const lab=v?(()=>{const[lo,hi]=v.split('-');return lo==='0'?'Hasta $'+hi+'M':hi==='999'?'Más de $'+lo+'M':'$'+lo+'M – $'+hi+'M';})():'Sin límite';
+  cbS.lab.pres=lab;cbMsg(lab,1);
+  cbMsg(cbJ(CBJ.pres[v])+'<br><br><b>'+cbJ(CBJ.pagoQ)+'</b>');
+  cbQR([[cbT('💵 De contado','💵 Cash'),"cbPago('con')"],[cbT('💳 Con financiamiento','💳 Financing'),"cbPago('fin')"],[cbT('🤷 Lo que convenga','🤷 Whatever works'),"cbPago('any')"]]);
+}
+function cbPago(v){
+  cbS.pago=v;const lab={con:'De contado',fin:'Con financiamiento',any:'Lo que convenga'}[v];cbS.lab.pago=lab;cbMsg(lab,1);
+  cbMsg(cbJ(CBJ.pago[v])+'<br><br><b>'+cbF(CBJ.cuandoQ)+'</b>');
+  cbQR([[cbT('🔥 Cuanto antes','🔥 ASAP'),"cbCuando('ya')"],[cbT('📅 En 1-3 meses','📅 In 1-3 months'),"cbCuando('meses')"],[cbT('👀 Solo estoy viendo','👀 Just looking'),"cbCuando('ver')"]]);
+}
+function cbCuando(v){
+  cbS.cuando=v;const lab={ya:'Cuanto antes',meses:'En 1-3 meses',ver:'Solo viendo'}[v];cbS.lab.cuando=lab;cbMsg(lab,1);
+  cbMsg(cbJ(CBJ.cuando[v]));
+  cbResult();
+}
+function cbFilter(level){
+  let a=props.filter(p=>p.estado!=='Renta'&&CBG[cbS.tipo||'any'].includes(p.tipo));
+  if(cbS.zona&&level<2)a=a.filter(p=>zoneOf(p)===cbS.zona);
+  if(cbS.pres&&level<1){const[lo,hi]=cbS.pres.split('-').map(Number);a=a.filter(p=>{const v=num(p.precio)/1e6;return !v||(v>=lo&&v<=hi);});}
+  if(cbS.pago==='fin'&&level<3)a=a.filter(finOn);
+  return a.sort((x,y)=>num(x.precio)-num(y.precio));
+}
+function cbCard(p){
+  const tag=finOK(p)?(finOn(p)?'💳 '+cbT('Financiamiento · enganche desde ','Financing · down payment from ')+engLabel(p):'💵 '+cbT('De contado','Cash')):(locOf(p)||p.ubicacion||'');
+  return `<div class="cbc" onclick="openDetail('${p.id}')"><img src="${(p.imgs||[])[0]||''}" onerror="this.style.visibility='hidden'"><div><b>${cbEsc(p.nombre||'')}</b><span>${cbEsc(p.precio||'')}</span><small>${tag}</small></div></div>`;
+}
+function cbResult(){
+  let lv=0,r=cbFilter(0);
+  while(!r.length&&lv<3){lv++;r=cbFilter(lv);}
+  cbS.found=r.slice(0,3).map(p=>p.nombre);
+  if(!r.length)cbMsg(cbT('Uf, ahorita no tengo nada de ese tipo en el catálogo 😅 Pero un asesor puede buscártelo.','Oof, nothing of that type right now 😅 But an advisor can search for you.'));
+  else{
+    const note=lv?cbT('<i>No encontré algo 100% exacto, pero mira estas que se le parecen 👇</i>','<i>No 100% exact match, but these come close 👇</i>'):cbF([['¡Listo, {n}! Con lo que me contaste, esto es lo que te toca ver 👇','Done, {n}! Based on what you told me, here is what you should see 👇'],['¡Tarán, {n}! Escogí estas pensando en ti 👇','Ta-da, {n}! I picked these with you in mind 👇']]);
+    cbMsg(note+r.slice(0,3).map(cbCard).join(''));
+  }
+  cbMsg(cbT('Toca una propiedad para ver fotos y precio. Y si quieres que un asesor te escriba, solo dime tu WhatsApp 📲','Tap a property to see photos and price. And if you want an advisor to message you, just give me your WhatsApp 📲'));
+  cbAsesor(true);
+}
+function cbMapa(){cbToggle();document.getElementById('mapa').scrollIntoView({behavior:'smooth'});}
+function cbFin(){
+  cbMsg(cbT('Financiamiento','Financing'),1);
+  const f=props.filter(finOn);
+  if(!f.length)cbMsg(cbT('Por ahora todo se maneja de contado, pero un asesor puede revisar opciones contigo 🤝','Everything is cash for now, but an advisor can review options with you 🤝'));
+  else cbMsg(cbT(`¡Buenas noticias! Tenemos <b>${f.length}</b> propiedad${f.length>1?'es':''} con financiamiento 💳 Abre una y usa la calculadora de mensualidades:`,`Good news! We have <b>${f.length}</b> financed propert${f.length>1?'ies':'y'} 💳 Open one and use the payment calculator:`)+f.slice(0,4).map(cbCard).join(''));
+  cbQR([[cbT('📲 Hablar con un asesor','📲 Talk to an advisor'),'cbAsesor()'],[cbT('🔄 Menú','🔄 Menu'),'cbStart()']]);
+}
+function cbAsesor(inline){
+  const hasN=!!cbS.nombre;
+  cbMsg((inline?'':cbT('¡Va! ','Deal! '))+(hasN?cbT(`Pásame tu WhatsApp, <b>${cbN()}</b>, y le mando todo tu perfil a un asesor 📲`,`Give me your WhatsApp, <b>${cbN()}</b>, and I will send your full profile to an advisor 📲`):cbT('Déjame tu nombre y WhatsApp y le mando todo tu perfil a un asesor 📲','Leave your name and WhatsApp and I will send your full profile to an advisor 📲'))+(hasN?'':`<input id="cbN" placeholder="${cbT('Tu nombre','Your name')}">`)+`<input id="cbP" placeholder="${cbT('Tu WhatsApp','Your WhatsApp')}" inputmode="tel"><button class="cbgo" onclick="cbLead()">${cbT('Enviar 📲','Send 📲')}</button>`);
+  cbQR([[cbT('🗺️ Ver el mapa','🗺️ See the map'),'cbMapa()'],[cbT('🔄 Empezar de nuevo','🔄 Start over'),'cbStart()']]);
+}
+async function cbSendEmail(subject,body,n,tel){
+  try{
+    await emailjs.send('service_anfrlqp','template_dfxg89w',{from_name:n,to_name:'Sáastun Bienes Raíces',message:body,reply_to:'saastunbienesraices@gmail.com',name:n,email:'saastunbienesraices@gmail.com',title:subject});
+    return true;
+  }catch(e){}
+  try{
+    const r=await fetch('https://formsubmit.co/ajax/saastunbienesraices@gmail.com',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({_subject:subject,_template:'box',nombre:n,whatsapp:tel,detalle:body})});
+    return r.ok;
+  }catch(e){return false;}
+}
+function cbLead(){
+  const nEl=document.getElementById('cbN'),tel=document.getElementById('cbP').value.trim();
+  const n=(nEl?nEl.value.trim():'')||cbS.nombre;
+  if(!n||tel.replace(/\D/g,'').length<8){showInlineToast(cbT('Escribe tu nombre y un WhatsApp válido','Enter your name and a valid WhatsApp'),'error');return;}
+  cbS.nombre=n;const l=cbS.lab;
+  const lines=['🆕 NUEVO CLIENTE · asistente web','👤 Nombre: '+n,'📞 WhatsApp: '+tel];
+  if(l.origen)lines.push('🌎 Viene de: '+l.origen);
+  if(l.conoce)lines.push('🧭 Conoce Yucatán/Mérida: '+l.conoce);
+  if(l.meta)lines.push('🎯 Objetivo: '+l.meta);
+  if(l.tipo)lines.push('🏷️ Busca: '+l.tipo);
+  if(l.zona)lines.push('📍 Zona: '+l.zona);
+  if(l.pres)lines.push('💰 Presupuesto: '+l.pres);
+  if(l.pago)lines.push('💳 Pago: '+l.pago);
+  if(l.cuando)lines.push('⏱️ Tiempo: '+l.cuando);
+  if(cbS.found.length)lines.push('🏡 Le llamaron la atención: '+cbS.found.join(', '));
+  const body=lines.join('\n');
+  cbSendEmail('🆕 Nuevo cliente: '+n+' (asistente web)',body,n,tel);
+  const url='https://wa.me/529992318875?text='+encodeURIComponent(body);
+  window.open(url,'_blank');
+  cbMsg(cbT('¡Listo, '+cbEsc(n)+'! 🎉 Ya le avisé al equipo y se abrió WhatsApp con tu perfil: <b>solo dale enviar</b> y un asesor te escribe.','Done, '+cbEsc(n)+'! 🎉 I notified the team and WhatsApp opened with your profile: <b>just hit send</b> and an advisor will write to you.')+`<a class="cbwa" target="_blank" href="${url}">${cbT('Si no se abrió, toca aquí','If it did not open, tap here')}</a>`);
+  cbQR([[cbT('🔄 Empezar de nuevo','🔄 Start over'),'cbStart()']]);
+}
+function cbSend(){
+  const i=document.getElementById('cbTxt'),v=i.value.trim();if(!v)return;i.value='';
+  if(cbS.wait==='nombre')return cbName(v);
+  if(cbS.wait==='origen')return cbOrigen('otro',v);
+  cbMsg(cbEsc(v),1);
+  const s=v.toLowerCase();
+  if(/financ|mensualid|enganche|cr[eé]dito|plazo/.test(s))return cbFin();
+  if(/invert|inversi/.test(s))return cbMeta('inv');
+  if(/lote|terreno|hect/.test(s))return cbTipo('lotes');
+  if(/casa|depa/.test(s))return cbTipo('casas');
+  if(/rancho|finca/.test(s))return cbTipo('ranchos');
+  if(/cenote|hacienda/.test(s))return cbTipo('otros');
+  if(/ubicaci|d[oó]nde|mapa|zona/.test(s)){cbMsg(cbT('Todas nuestras propiedades están en el mapa. Toca una zona y te enseño las que hay ahí 🗺️','All our properties are on the map. Tap an area to see what is there 🗺️'));return cbQR([[cbT('🗺️ Ver el mapa','🗺️ See the map'),'cbMapa()'],[cbT('🔄 Menú','🔄 Menu'),'cbStart()']]);}
+  if(/asesor|contacto|whats|llam|tel[eé]fono|hablar|vend/.test(s))return cbAsesor();
+  if(/chiste|broma|jaja|chistoso/.test(s)){cbMsg(cbT('¿Qué le dice un lote a otro lote? "Qué bonito terreno tienes" 😂','What does one lot say to another? "Nice land you have there" 😂'));return cbQR([[cbT('🔄 Menú','🔄 Menu'),'cbStart()']]);}
+  cbMsg(cbT('Jeje, no te entendí bien 😅 Mejor elige una opción:','Hehe, I did not get that 😅 Pick an option:'));
+  cbStart();
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  updateBars();applyLang();
+});
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded',()=>{
+  // Esperar a que Firebase SDK esté listo
+  function tryInit(attempts){
+    if(typeof firebase!=='undefined'&&firebase.firestore){
+      initApp();waitForHubSpot();
+    } else if(attempts>0){
+      setTimeout(()=>tryInit(attempts-1),200);
+    } else {
+      console.warn('Firebase no disponible, cargando sin conexión');
+      initApp();waitForHubSpot();
+    }
+  }
+  tryInit(15);
+});
+</script>
+
+<!-- ══ AUDIO BIENVENIDA ══ -->
+<script>
+(function(){
+  function b64toBlob(b64,mime){
+    const bin=atob(b64);
+    const arr=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+    return new Blob([arr],{type:mime});
+  }
+
+  const blobUrl='musica.mp3';
+
+  const audio=new Audio(blobUrl);
+  audio.preload='auto';
+  audio.volume=0;
+  audio.load();
+
+  let done=false;
+
+  function start(){
+    if(done)return;
+    done=true;
+    document.removeEventListener('click',start,true);
+    document.removeEventListener('touchstart',start,true);
+
+    audio.play().then(()=>{
+      let vol=0;
+      const fi=setInterval(()=>{
+        vol=Math.min(vol+0.05,0.85);
+        audio.volume=vol;
+        if(vol>=0.85)clearInterval(fi);
+      },50);
+
+      setTimeout(()=>{
+        const fo=setInterval(()=>{
+          audio.volume=Math.max(audio.volume-0.05,0);
+          if(audio.volume<=0){clearInterval(fo);audio.pause();playClick();}
+        },50);
+      },4200);
+
+    }).catch(()=>{
+      done=false;
+      document.addEventListener('click',start,true);
+      document.addEventListener('touchstart',start,true);
+    });
+  }
+
+  function playClick(){
+    const c=new(window.AudioContext||window.webkitAudioContext)();
+    [[1400,0.14],[1900,0.07]].forEach(([freq,vol])=>{
+      const o=c.createOscillator(),g=c.createGain();
+      o.type='sine';
+      o.frequency.setValueAtTime(freq,c.currentTime);
+      o.frequency.exponentialRampToValueAtTime(freq*0.6,c.currentTime+0.07);
+      g.gain.setValueAtTime(vol,c.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+0.09);
+      o.connect(g);g.connect(c.destination);
+      o.start();o.stop(c.currentTime+0.1);
+    });
+  }
+
+  window.addEventListener('load',()=>start());
+
+})();
+</script>
+
+
+<!-- CHATBOT -->
+<div id="cb">
+  <div id="cbBox">
+    <div id="cbHead"><span>Asistente Sáastun</span><button onclick="cbToggle()">×</button></div>
+    <div id="cbMsgs"></div>
+    <div id="cbQR"></div>
+    <div id="cbIn"><input id="cbTxt" placeholder="Escribe aquí..." onkeydown="if(event.key==='Enter')cbSend()"><button onclick="cbSend()">➤</button></div>
+  </div>
+  <button id="cbFab" onclick="cbToggle()"><b>💬</b><span id="cbFabTxt">¿Te ayudo?</span></button>
+</div>
+
+</body>
+</html>
